@@ -1,11 +1,12 @@
 <?php
 
 namespace App\Models;
-//المستخدمين
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Services\FcmService;
 
 class User extends Authenticatable
 {
@@ -23,6 +24,7 @@ class User extends Authenticatable
         'is_available',
         'phone',
         'avatar',
+        'fcm_token',
     ];
 
     protected $hidden = [
@@ -48,6 +50,16 @@ class User extends Authenticatable
         return $this->hasMany(Order::class);
     }
 
+    public function deviceTokens()
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    public function userNotifications()
+    {
+        return $this->hasMany(UserNotification::class)->orderBy('created_at', 'desc');
+    }
+
     public function isAdmin()
     {
         return $this->is_admin === true || $this->role === 'admin';
@@ -61,5 +73,13 @@ class User extends Authenticatable
     public function captainOrders()
     {
         return $this->hasMany(Order::class, 'assigned_captain_id');
+    }
+
+    /**
+     * إرسال إشعار فوري وتخزينه في قاعدة البيانات
+     */
+    public function sendPushNotification(string $title, string $body, array $data = [], string $type = 'general'): ?UserNotification
+    {
+        return app(FcmService::class)->sendToUser($this, $title, $body, $data, $type);
     }
 }

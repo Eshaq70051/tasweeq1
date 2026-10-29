@@ -1,46 +1,118 @@
 @extends('admin.layout')
 
-@section('title', 'تفاصيل الكابتن')
-@section('page_title', 'حساب الكابتن: ' . $captain->name)
+@section('title', 'تفاصيل الكابتن | ' . $captain->name)
+@section('page_title', 'كشف حساب الكابتن: ' . $captain->name)
 
 @section('content')
+    <div style="margin-bottom: 20px;">
+        <a href="{{ route('admin.captains') }}" class="btn btn-outline" style="padding: 8px 14px;">
+            <i class="fa-solid fa-arrow-right"></i>
+            <span>العودة لقائمة الكباتن</span>
+        </a>
+    </div>
+
     <div class="stat-grid">
-        <div class="stat-card"><div>المحصل نقداً</div><div class="value">{{ number_format($cashCollected, 2) }}</div></div>
-        <div class="stat-card"><div>إجمالي السداد المعتمد</div><div class="value">{{ number_format($paidDebt, 2) }}</div></div>
-        <div class="stat-card"><div>المديونية الحالية</div><div class="value" style="color: var(--danger);">{{ number_format($debt, 2) }}</div></div>
+        <div class="stat-card">
+            <div class="info">
+                <span class="title">إجمالي المحصل نقداً</span>
+                <span class="value">{{ number_format($cashCollected, 2) }} <small style="font-size: 13px; font-weight: normal; color: var(--text-muted);">ريال</small></span>
+            </div>
+            <div class="icon-box" style="background: rgba(45, 156, 219, 0.1); color: #2D9CDB;">
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="info">
+                <span class="title">إجمالي السداد المعتمد</span>
+                <span class="value">{{ number_format($paidDebt, 2) }} <small style="font-size: 13px; font-weight: normal; color: var(--text-muted);">ريال</small></span>
+            </div>
+            <div class="icon-box" style="background: rgba(39, 174, 96, 0.1); color: #27AE60;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="info">
+                <span class="title">المديونية الحالية المتبقية</span>
+                <span class="value" style="color: var(--danger);">{{ number_format($debt, 2) }} <small style="font-size: 13px; font-weight: normal; color: var(--text-muted);">ريال</small></span>
+            </div>
+            <div class="icon-box" style="background: rgba(255, 77, 77, 0.1); color: var(--danger);">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+            </div>
+        </div>
     </div>
 
     <div class="panel">
-        <h3>طلبات السداد</h3>
+        <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-receipt" style="color: var(--primary);"></i>
+            <span>طلبات السداد والتسوية المالية</span>
+        </h3>
         <div class="table-responsive">
             <table class="table">
-                <thead><tr><th>المبلغ</th><th>الطريقة</th><th>المرجع</th><th>الإيصال</th><th>الحالة</th><th>الإجراء</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>المبلغ</th>
+                        <th>طريقة التحويل</th>
+                        <th>رقم المرجع / الحوالة</th>
+                        <th>صورة الإيصال</th>
+                        <th>حالة السداد</th>
+                        <th style="text-align: center;">الإجراء</th>
+                    </tr>
+                </thead>
                 <tbody>
                     @forelse($payments as $payment)
                         <tr>
-                            <td>{{ number_format($payment->amount, 2) }}</td>
-                            <td>{{ ['jaib' => 'جيب', 'jawali' => 'جوالي', 'one_cash' => 'ون كاش'][$payment->payment_method] ?? $payment->payment_method }}</td>
-                            <td>{{ $payment->reference ?: '-' }}</td>
+                            <td style="font-weight: 800; color: var(--primary);">{{ number_format($payment->amount, 2) }} ريال</td>
+                            <td>
+                                @php
+                                    $paymentMethods = [
+                                        'jaib' => 'محفظة جيب',
+                                        'jawali' => 'جوالي',
+                                        'one_cash' => 'ون كاش',
+                                        'kuraimi' => 'الكريمي',
+                                    ];
+                                @endphp
+                                <span style="font-weight: 700;">{{ $paymentMethods[$payment->payment_method] ?? $payment->payment_method }}</span>
+                            </td>
+                            <td>{{ $payment->reference ?: '—' }}</td>
                             <td>
                                 @if($payment->receipt_image)
                                     <a href="{{ route('media.file', ['path' => $payment->receipt_image]) }}" target="_blank">
-                                        <img src="{{ route('media.file', ['path' => $payment->receipt_image]) }}" alt="receipt" style="width:70px;height:50px;object-fit:cover;border-radius:8px;">
+                                        <img src="{{ route('media.file', ['path' => $payment->receipt_image]) }}" alt="receipt" style="width:70px;height:50px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
                                     </a>
                                 @else
-                                    -
+                                    <span style="color: var(--text-muted);">لا يوجد</span>
                                 @endif
                             </td>
-                            <td>{{ $payment->status === 'approved' ? 'معتمد' : 'قيد المراجعة' }}</td>
                             <td>
+                                <span class="status-badge {{ $payment->status === 'approved' ? 'status-success' : 'status-pending' }}">
+                                    <i class="fa-solid {{ $payment->status === 'approved' ? 'fa-check' : 'fa-clock' }}" style="font-size: 10px;"></i>
+                                    <span>{{ $payment->status === 'approved' ? 'معتمد ومقبول' : 'قيد المراجعة' }}</span>
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
                                 @if($payment->status === 'pending')
-                                    <form action="{{ route('admin.captain-payments.approve', $payment) }}" method="POST">@csrf<button class="btn btn-primary" type="submit">اعتماد السداد</button></form>
+                                    <form action="{{ route('admin.captain-payments.approve', $payment) }}" method="POST">
+                                        @csrf
+                                        <button class="btn btn-primary" type="submit" style="padding: 6px 12px; font-size: 11px;">
+                                            <i class="fa-solid fa-check-double"></i>
+                                            <span>اعتماد السداد</span>
+                                        </button>
+                                    </form>
                                 @else
-                                    {{ optional($payment->approved_at)->format('Y-m-d H:i') }}
+                                    <small style="color: var(--text-muted); font-size: 11px;">
+                                        تم الاعتماد: {{ optional($payment->approved_at)->format('Y-m-d H:i') }}
+                                    </small>
                                 @endif
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6">لا توجد طلبات سداد.</td></tr>
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                                لا توجد طلبات سداد مسجلة
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
@@ -48,27 +120,60 @@
     </div>
 
     <div class="panel">
-        <h3>سجل الطلبات والحالات</h3>
+        <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-route" style="color: var(--primary);"></i>
+            <span>سجل طلبات التوصيل ومراحل الإنجاز</span>
+        </h3>
         <div class="table-responsive">
             <table class="table">
-                <thead><tr><th>الطلب</th><th>العميل</th><th>المبلغ</th><th>الحالة الحالية</th><th>التسلسل الزمني</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>بيانات العميل</th>
+                        <th>المبلغ الإجمالي</th>
+                        <th>حالة الطلب</th>
+                        <th>التسلسل الزمني للحالات</th>
+                    </tr>
+                </thead>
                 <tbody>
                     @forelse($orders as $order)
                         <tr>
-                            <td>#{{ $order->id }}<br><small>{{ $order->created_at->format('Y-m-d H:i') }}</small></td>
-                            <td>{{ $order->customer_name }}<br><small>{{ $order->customer_phone }}</small></td>
-                            <td>{{ number_format($order->total_amount, 2) }}</td>
-                            <td>{{ $order->status }}</td>
                             <td>
-                                @forelse($order->statusHistory as $event)
-                                    <div>{{ $event->status }} - {{ $event->created_at->format('Y-m-d H:i') }}</div>
-                                @empty
-                                    <span style="color: var(--text-muted);">لا يوجد سجل قديم</span>
-                                @endforelse
+                                <a href="{{ route('admin.orders.show', $order) }}" style="font-weight: 800; color: var(--primary); text-decoration: none;">
+                                    #{{ $order->id }}
+                                </a>
+                                <br>
+                                <small style="color: var(--text-muted); font-size: 11px;">{{ $order->created_at->format('Y-m-d H:i') }}</small>
+                            </td>
+                            <td>
+                                <div style="font-weight: 700;">{{ $order->customer_name }}</div>
+                                <small style="color: var(--text-muted); font-size: 11px;">{{ $order->customer_phone }}</small>
+                            </td>
+                            <td style="font-weight: 800;">{{ number_format($order->total_amount, 2) }} ريال</td>
+                            <td>
+                                <span class="status-badge {{ $order->status === 'completed' ? 'status-success' : 'status-info' }}">
+                                    {{ $order->status }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11px;">
+                                    @forelse($order->statusHistory as $event)
+                                        <div style="color: var(--text-muted);">
+                                            <i class="fa-solid fa-check" style="color: var(--primary); font-size: 9px; margin-left: 4px;"></i>
+                                            <strong>{{ $event->status }}</strong>: {{ $event->created_at->format('Y-m-d H:i') }}
+                                        </div>
+                                    @empty
+                                        <span style="color: var(--text-muted);">لا يوجد سجل حالات سابق</span>
+                                    @endforelse
+                                </div>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">لا توجد طلبات.</td></tr>
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                                لم يتم إسناد أي طلبات لهذا الكابتن بعد
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>

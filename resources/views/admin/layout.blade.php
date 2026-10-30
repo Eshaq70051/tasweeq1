@@ -222,6 +222,114 @@
             .panel { padding: 18px; border-radius: 16px; }
             .top-bar { padding: 12px 16px; margin-bottom: 18px; }
         }
+
+        /* Pagination & Filter Styling */
+        .filter-card {
+            background: white;
+            border-radius: 18px;
+            padding: 18px 22px;
+            border: 1px solid var(--border);
+            margin-bottom: 22px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.02);
+        }
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+            margin-bottom: 16px;
+            scrollbar-width: thin;
+        }
+        .filter-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            background: #F4F7F8;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .filter-pill:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .filter-pill.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        .filter-pill .badge-count {
+            background: rgba(0,0,0,0.08);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+        }
+        .filter-pill.active .badge-count {
+            background: rgba(255,255,255,0.25);
+            color: white;
+        }
+        
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 24px;
+            padding: 16px 20px;
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+        .pagination-container .info-text {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .pagination-container nav svg {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .pagination-container nav div:first-child {
+            display: none;
+        }
+        .pagination-container nav span, 
+        .pagination-container nav a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 34px;
+            height: 34px;
+            padding: 0 10px;
+            margin: 0 2px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            background: white;
+            transition: all 0.2s;
+        }
+        .pagination-container nav span[aria-current="page"] span,
+        .pagination-container nav a.active {
+            background: var(--primary) !important;
+            color: white !important;
+            border-color: var(--primary) !important;
+        }
+        .pagination-container nav a:hover {
+            background: var(--primary-soft);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
     </style>
 </head>
 <body>
@@ -254,6 +362,10 @@
             <a href="{{ route('admin.orders') }}" class="{{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
                 <i class="fa-solid fa-bag-shopping"></i>
                 <span>الطلبات</span>
+            </a>
+            <a href="{{ route('admin.coupons') }}" class="{{ request()->routeIs('admin.coupons*') ? 'active' : '' }}">
+                <i class="fa-solid fa-ticket"></i>
+                <span>كوبونات الخصم</span>
             </a>
             <a href="{{ route('admin.carts') }}" class="{{ request()->routeIs('admin.carts*') ? 'active' : '' }}">
                 <i class="fa-solid fa-basket-shopping"></i>

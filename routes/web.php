@@ -7,7 +7,18 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 
 Route::get('/', function () {
-    return view('welcome');
+    if (Auth::check() && Auth::user()->isAdmin()) {
+        return redirect()->route('admin.dashboard');
+    }
+    return redirect()->route('login');
+});
+
+Route::get('/dashboard', function () {
+    return redirect()->route('admin.dashboard');
+});
+
+Route::get('/admin', function () {
+    return redirect()->route('admin.dashboard');
 });
 
 Route::get('/media/{path}', function (string $path) {

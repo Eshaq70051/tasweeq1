@@ -4,15 +4,64 @@
 @section('page_title', 'فريق الكباتن والتوصيل')
 
 @section('content')
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap;">
         <button class="btn btn-primary" onclick="document.getElementById('add-captain-form').style.display='block'; window.scrollTo({top: 0, behavior: 'smooth'});">
             <i class="fa-solid fa-user-plus"></i>
             <span>إضافة كابتن جديد</span>
         </button>
         <div style="background: white; padding: 10px 22px; border-radius: 99px; border: 1px solid var(--border); font-weight: 700; color: var(--primary); font-size: 13px; display: flex; align-items: center; gap: 8px;">
             <i class="fa-solid fa-motorcycle"></i>
-            <span>إجمالي الكباتن: {{ count($captains) }}</span>
+            <span>إجمالي الكباتن: {{ $captains->total() }}</span>
         </div>
+    </div>
+
+    <!-- بطاقة البحث والفلترة للكباتن -->
+    <div class="filter-card">
+        <form action="{{ route('admin.captains') }}" method="GET" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">
+                    <i class="fa-solid fa-magnifying-glass" style="margin-left: 4px;"></i>
+                    البحث
+                </label>
+                <input type="text" name="q" value="{{ request('q') }}" placeholder="اسم الكابتن، الهاتف، البريد..." style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%;">
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">
+                    <i class="fa-solid fa-signal" style="margin-left: 4px;"></i>
+                    حالة الاتصال
+                </label>
+                <select name="is_available" style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%; background: white;">
+                    <option value="">-- الكل --</option>
+                    <option value="1" {{ request('is_available') === '1' ? 'selected' : '' }}>متصل (جاهز للطلبات)</option>
+                    <option value="0" {{ request('is_available') === '0' ? 'selected' : '' }}>غير متصل</option>
+                </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">
+                    <i class="fa-solid fa-toggle-on" style="margin-left: 4px;"></i>
+                    حالة الحساب
+                </label>
+                <select name="status" style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%; background: white;">
+                    <option value="">-- كل الحالات --</option>
+                    <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>نشط</option>
+                    <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>معطل</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1; height: 42px;">
+                    <i class="fa-solid fa-filter"></i>
+                    <span>تصفية</span>
+                </button>
+                @if(request()->anyFilled(['q', 'is_available', 'status']))
+                    <a href="{{ route('admin.captains') }}" class="btn btn-outline" style="height: 42px;" title="إعادة ضبط">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </a>
+                @endif
+            </div>
+        </form>
     </div>
 
     <!-- نموذج إضافة كابتن -->
@@ -26,20 +75,20 @@
             <input type="hidden" name="role" value="captain">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
                 <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label style="font-size: 13px; font-weight: 700;">اسم الكابتن</label>
+                    <label style="font-size: 13px; font-weight: 700;">اسم الكابتن <span style="color: var(--danger);">*</span></label>
                     <input type="text" name="name" placeholder="الاسم الكامل" required style="padding: 12px; border-radius: 12px; border: 1px solid var(--border); outline: none;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label style="font-size: 13px; font-weight: 700;">البريد الإلكتروني</label>
+                    <label style="font-size: 13px; font-weight: 700;">البريد الإلكتروني <span style="color: var(--danger);">*</span></label>
                     <input type="email" name="email" placeholder="captain@example.com" required style="padding: 12px; border-radius: 12px; border: 1px solid var(--border); outline: none;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
-                    <label style="font-size: 13px; font-weight: 700;">كلمة المرور</label>
+                    <label style="font-size: 13px; font-weight: 700;">كلمة المرور <span style="color: var(--danger);">*</span></label>
                     <input type="password" name="password" placeholder="••••••••" required style="padding: 12px; border-radius: 12px; border: 1px solid var(--border); outline: none;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label style="font-size: 13px; font-weight: 700;">رقم الهاتف</label>
-                    <input type="text" name="phone" placeholder="770000000" required style="padding: 12px; border-radius: 12px; border: 1px solid var(--border); outline: none;">
+                    <input type="text" name="phone" placeholder="770000000" style="padding: 12px; border-radius: 12px; border: 1px solid var(--border); outline: none;">
                 </div>
             </div>
             <div style="margin-top: 18px; display: flex; justify-content: flex-end; gap: 10px;">
@@ -146,12 +195,22 @@
                         <tr>
                             <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
                                 <i class="fa-solid fa-motorcycle" style="font-size: 32px; display: block; margin-bottom: 10px; color: #CCD2D6;"></i>
-                                لا يوجد كباتن مسجلين حالياً
+                                لا يوجد كباتن مطابقين لخيارات البحث
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- الترقيم والتنقل بين الصفحات -->
+    <div class="pagination-container">
+        <div class="info-text">
+            عرض <strong>{{ $captains->firstItem() ?? 0 }}</strong> إلى <strong>{{ $captains->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $captains->total() }}</strong> كابتن
+        </div>
+        <div>
+            {{ $captains->links() }}
         </div>
     </div>
 @endsection

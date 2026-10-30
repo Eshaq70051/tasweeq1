@@ -75,6 +75,16 @@ class User extends Authenticatable
         return $this->hasMany(Order::class, 'assigned_captain_id');
     }
 
+    public function couponUsages()
+    {
+        return $this->hasMany(CouponUsage::class);
+    }
+
+    public function captainLedgerEntries()
+    {
+        return $this->hasMany(CaptainLedgerEntry::class, 'captain_id')->latest();
+    }
+
     /**
      * إرسال إشعار فوري وتخزينه في قاعدة البيانات
      */

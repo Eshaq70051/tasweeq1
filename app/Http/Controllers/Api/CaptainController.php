@@ -5,113 +5,177 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\CaptainPayment;
-use App\Models\User;
+use App\Services\CaptainWalletService;
+use App\Services\OrderNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 class CaptainController extends Controller
 {
     /**
-     * لوحة معلومات الكابتن: الإحصائيات والطلبات المسندة
+     * لوحة معلومات الكابتن
      */
     public function dashboard()
     {
-        $user = Auth::user();
+        $captain = Auth::user();
         
-        $captainOrders = Order::where('assigned_captain_id', $user->id);
-        $cashCollected = (clone $captainOrders)->where('status', 'completed')->where('payment_method', 'cash')->sum('total_amount');
-        $paidDebt = CaptainPayment::where('captain_id', $user->id)->where('status', 'approved')->sum('amount');
+        $assignedOrders = Order::with('items')
+            ->where('assigned_captain_id', $captain->id)
+            ->whereIn('status', ['processing', 'arrived_store', 'on_the_way'])
+            ->latest()
+            ->get();
 
-        $stats = [
-            'income' => (float) (clone $captainOrders)->where('status', 'completed')->sum('captain_commission'),
-            'captain_commission' => (float) (clone $captainOrders)->where('status', 'completed')->sum('captain_commission'),
-            'orders_count' => (clone $captainOrders)->where('status', 'completed')->whereDate('updated_at', today())->count(),
-            'completed_orders' => (clone $captainOrders)->where('status', 'completed')->count(),
-            'active_orders' => (clone $captainOrders)->whereIn('status', ['processing', 'arrived_store', 'on_the_way'])->count(),
-            'cash_collected' => (float) $cashCollected,
-            'paid_debt' => (float) $paidDebt,
-            'outstanding_debt' => max(0, (float) $cashCollected - (float) $paidDebt),
-            'is_available' => (bool) $user->is_available
-        ];
+        $completedOrdersCount = Order::where('assigned_captain_id', $captain->id)
+            ->where('status', 'completed')
+            ->count();
 
-        $assignedOrders = Order::with('statusHistory')
-                               ->where('assigned_captain_id', $user->id)
-                               ->whereIn('status', ['processing', 'arrived_store', 'on_the_way'])
-                               ->orderBy('updated_at', 'desc')
-                               ->limit(50)
-                               ->get();
+        $cashCollected = Order::where('assigned_captain_id', $captain->id)
+            ->where('status', 'completed')
+            ->where('payment_method', 'cash')
+            ->sum('total_amount');
+
+        $paidDebt = CaptainPayment::where('captain_id', $captain->id)
+            ->where('status', 'approved')
+            ->sum('amount');
+
+        $pendingPayments = CaptainPayment::where('captain_id', $captain->id)
+            ->where('status', 'pending')
+            ->sum('amount');
+
+        $outstandingDebt = max(0, (float) $cashCollected - (float) $paidDebt);
+
+        $totalCommission = Order::where('assigned_captain_id', $captain->id)
+            ->where('status', 'completed')
+            ->sum('captain_commission');
+
+        $captainRating = \App\Models\CaptainRating::where('captain_id', $captain->id)->avg('rating');
 
         return response()->json([
             'success' => true,
             'data' => [
-                'stats' => $stats,
-                'orders' => $assignedOrders
+                'is_available' => (bool) $captain->is_available,
+                'assigned_orders' => $assignedOrders,
+                'orders' => $assignedOrders,
+                'completed_orders_count' => $completedOrdersCount,
+                'cash_collected' => (float) $cashCollected,
+                'total_commission' => (float) $totalCommission,
+                'paid_debt' => (float) $paidDebt,
+                'pending_payments' => (float) $pendingPayments,
+                'outstanding_debt' => (float) $outstandingDebt,
+                'stats' => [
+                    'income' => (float) $totalCommission,
+                    'outstanding_debt' => (float) $outstandingDebt,
+                    'cash_collected' => (float) $cashCollected,
+                    'paid_debt' => (float) $paidDebt,
+                    'orders_count' => count($assignedOrders),
+                    'completed_orders' => $completedOrdersCount,
+                    'is_available' => (bool) $captain->is_available,
+                    'rating' => $captainRating ? round((float) $captainRating, 1) : 5.0,
+                ],
             ]
         ]);
     }
 
-    public function report(Request $request)
+    /**
+     * المحفظة المالية وسجل المعاملات للكابتن
+     */
+    public function wallet()
     {
-        $user = Auth::user();
-        $orders = Order::where('assigned_captain_id', $user->id);
-        if ($request->filled('from')) $orders->whereDate('created_at', '>=', $request->date('from'));
-        if ($request->filled('to')) $orders->whereDate('created_at', '<=', $request->date('to'));
+        $captain = Auth::user();
+        $summary = app(CaptainWalletService::class)->getCaptainFinancialSummary($captain);
+        $ledger = $captain->captainLedgerEntries()->take(30)->get();
 
-        $cashCollected = (clone $orders)->where('status', 'completed')->where('payment_method', 'cash')->sum('total_amount');
-        $paidDebt = CaptainPayment::where('captain_id', $user->id)->where('status', 'approved')->sum('amount');
-
-        return response()->json(['success' => true, 'data' => [
-            'orders_count' => (clone $orders)->count(),
-            'completed_orders' => (clone $orders)->where('status', 'completed')->count(),
-            'active_orders' => (clone $orders)->whereIn('status', ['processing', 'arrived_store', 'on_the_way'])->count(),
-            'cancelled_orders' => (clone $orders)->where('status', 'cancelled')->count(),
-            'income' => (float) (clone $orders)->where('status', 'completed')->sum('captain_commission'),
-            'captain_commission' => (float) (clone $orders)->where('status', 'completed')->sum('captain_commission'),
-            'cash_collected' => (float) $cashCollected,
-            'paid_debt' => (float) $paidDebt,
-            'outstanding_debt' => max(0, (float) $cashCollected - (float) $paidDebt),
-            'payments' => CaptainPayment::where('captain_id', $user->id)->latest()->get(),
-            'orders' => (clone $orders)->with('statusHistory')->latest()->limit(100)->get(),
-        ]]);
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'summary' => $summary,
+                'ledger' => $ledger,
+            ]
+        ]);
     }
 
+    /**
+     * تقرير كشف الحساب والمديونية للكابتن
+     */
+    public function report()
+    {
+        $captain = Auth::user();
+        $summary = app(CaptainWalletService::class)->getCaptainFinancialSummary($captain);
+
+        $payments = CaptainPayment::where('captain_id', $captain->id)
+            ->latest()
+            ->get();
+
+        $completedOrders = Order::where('assigned_captain_id', $captain->id)
+            ->where('status', 'completed')
+            ->latest()
+            ->get(['id', 'customer_name', 'total_amount', 'payment_method', 'captain_commission', 'created_at']);
+
+        return response()->json([
+            'success' => true,
+            'data' => array_merge($summary, [
+                'payments' => $payments,
+                'completed_orders' => $completedOrders,
+            ])
+        ]);
+    }
+
+    /**
+     * تقديم طلب سداد من الكابتن
+     */
     public function requestPayment(Request $request)
     {
-        $user = Auth::user();
-        $validated = $request->validate([
-            'amount' => 'required|numeric|min:0.01',
-            'payment_method' => 'required|in:jaib,jawali,one_cash',
-            'reference' => 'nullable|string|max:100',
-            'notes' => 'nullable|string|max:500',
-            'receipt_image' => 'required|image|max:2048',
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'payment_method' => 'required|string',
+            'reference' => 'nullable|string',
+            'receipt_image' => 'nullable|image|max:3072',
+            'notes' => 'nullable|string',
         ]);
 
-        $cashCollected = Order::where('assigned_captain_id', $user->id)->where('status', 'completed')->where('payment_method', 'cash')->sum('total_amount');
-        $approved = CaptainPayment::where('captain_id', $user->id)->where('status', 'approved')->sum('amount');
-        $pending = CaptainPayment::where('captain_id', $user->id)->where('status', 'pending')->sum('amount');
-        $available = max(0, (float) $cashCollected - (float) $approved - (float) $pending);
-        if ((float) $validated['amount'] > $available) {
-            return response()->json(['success' => false, 'message' => 'المبلغ أكبر من المديونية المتاحة للسداد'], 422);
+        $receiptPath = null;
+        if ($request->hasFile('receipt_image')) {
+            $receiptPath = $request->file('receipt_image')->store('captain_payments', 'public');
         }
 
-        $validated['receipt_image'] = $request->file('receipt_image')->store('captain-payments', 'public');
-        $payment = CaptainPayment::create(array_merge($validated, ['captain_id' => $user->id]));
-        return response()->json(['success' => true, 'message' => 'تم إرسال طلب السداد للمراجعة', 'data' => $payment], 201);
+        $payment = CaptainPayment::create([
+            'captain_id' => Auth::id(),
+            'amount' => $request->amount,
+            'payment_method' => $request->payment_method,
+            'reference' => $request->reference,
+            'receipt_image' => $receiptPath,
+            'notes' => $request->notes,
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم رفع طلب السداد وهو قيد المراجعة والاعتماد',
+            'data' => $payment
+        ], 201);
     }
 
-    /** تسجيل وصول الكابتن إلى المتجر قبل استلام الطلب. */
+    /**
+     * تسجيل الوصول إلى المتجر
+     */
     public function arriveAtStore($id)
     {
         $order = Order::where('id', $id)->where('assigned_captain_id', Auth::id())->first();
+        
+        if (!$order) {
+            return response()->json(['success' => false, 'message' => 'الطلب غير موجود أو غير مسند إليك'], 404);
+        }
 
-        if (!$order || $order->status !== 'processing') {
-            return response()->json(['success' => false, 'message' => 'لا يمكن تسجيل الوصول لهذا الطلب حالياً'], 400);
+        if ($order->status !== 'processing') {
+            return response()->json(['success' => false, 'message' => 'الطلب ليس في حالة التجهيز'], 400);
         }
 
         $order->status = 'arrived_store';
         $order->save();
         $this->recordStatus($order);
+
+        // إشعار العميل بوصول الكابتن للمتجر
+        app(OrderNotificationService::class)->notifyCustomerOrderStatus($order, 'arrived_store');
 
         return response()->json(['success' => true, 'message' => 'تم تسجيل الوصول إلى المتجر']);
     }
@@ -153,6 +217,9 @@ class CaptainController extends Controller
         $order->save();
         $this->recordStatus($order);
 
+        // إشعار فوري للعميل بأن طلبه أصبح في الطريق
+        app(OrderNotificationService::class)->notifyCustomerOrderStatus($order, 'on_the_way');
+
         return response()->json(['success' => true, 'message' => 'تم استلام الطلب بنجاح']);
     }
 
@@ -168,12 +235,20 @@ class CaptainController extends Controller
         }
 
         $order->status = 'completed';
-        $order->captain_commission = round(
-            (float) $order->total_amount * ((float) env('CAPTAIN_COMMISSION_RATE', 10) / 100),
-            2
-        );
+        if ($order->captain_commission <= 0) {
+            $order->captain_commission = round(
+                (float) $order->total_amount * ((float) env('CAPTAIN_COMMISSION_RATE', 10) / 100),
+                2
+            );
+        }
         $order->save();
         $this->recordStatus($order);
+
+        // تسجيل قيود دفتر الأستاذ المالي للكابتن
+        app(CaptainWalletService::class)->recordOrderDelivered($order);
+
+        // إشعار فوري للعميل باكتمال التوصيل بنجاح
+        app(OrderNotificationService::class)->notifyCustomerOrderStatus($order, 'completed');
 
         return response()->json(['success' => true, 'message' => 'تم إيصال الطلب، شكراً لك!']);
     }

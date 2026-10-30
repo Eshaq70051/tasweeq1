@@ -140,9 +140,21 @@
                     @endforeach
                 </tbody>
                 <tfoot>
+                    @if($order->discount_amount > 0)
+                        <tr>
+                            <td colspan="3" style="text-align: left; padding: 15px 15px 5px; font-size: 14px; font-weight: 700; color: var(--text-muted);">المجموع الفرعي:</td>
+                            <td style="text-align: left; padding: 15px 15px 5px; font-size: 16px; font-weight: 800;">{{ number_format($order->subtotal_amount, 2) }} ريال</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="text-align: left; padding: 5px 15px; font-size: 14px; font-weight: 700; color: var(--danger);">
+                                الخصم (كوبون {{ $order->coupon_code }}):
+                            </td>
+                            <td style="text-align: left; padding: 5px 15px; font-size: 16px; font-weight: 800; color: var(--danger);">- {{ number_format($order->discount_amount, 2) }} ريال</td>
+                        </tr>
+                    @endif
                     <tr>
-                        <td colspan="3" style="text-align: left; padding: 25px 15px 15px; font-size: 16px; font-weight: 700;">الإجمالي الكلي:</td>
-                        <td style="text-align: left; padding: 25px 15px 15px; font-size: 22px; font-weight: 900; color: var(--primary);">{{ number_format($order->total_amount, 2) }} ريال</td>
+                        <td colspan="3" style="text-align: left; padding: 15px; font-size: 16px; font-weight: 700;">الإجمالي النهائي المستحق:</td>
+                        <td style="text-align: left; padding: 15px; font-size: 22px; font-weight: 900; color: var(--primary);">{{ number_format($order->total_amount, 2) }} ريال</td>
                     </tr>
                 </tfoot>
             </table>

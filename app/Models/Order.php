@@ -9,12 +9,16 @@ class Order extends Model
     protected $fillable = [
         'user_id', 
         'assigned_captain_id',
+        'coupon_id',
+        'coupon_code',
         'customer_name', 
         'customer_phone', 
         'customer_email',
         'customer_address', 
         'latitude',
         'longitude',
+        'subtotal_amount',
+        'discount_amount',
         'total_amount', 
         'captain_commission',
         'payment_method', 
@@ -29,6 +33,8 @@ class Order extends Model
     protected $casts = [
         'is_paid' => 'boolean',
         'paid_at' => 'datetime',
+        'subtotal_amount' => 'float',
+        'discount_amount' => 'float',
         'total_amount' => 'float',
         'captain_commission' => 'float',
     ];
@@ -41,6 +47,11 @@ class Order extends Model
     public function captain()
     {
         return $this->belongsTo(User::class, 'assigned_captain_id');
+    }
+
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     public function captainRating()
@@ -56,5 +67,10 @@ class Order extends Model
     public function statusHistory()
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at');
+    }
+
+    public function ledgerEntries()
+    {
+        return $this->hasMany(CaptainLedgerEntry::class);
     }
 }

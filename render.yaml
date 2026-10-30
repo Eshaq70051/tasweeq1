@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: tasweeq-backend
+    env: docker
+    plan: free
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    healthCheckPath: /up
+    envVars:
+      - key: APP_NAME
+        value: Tasweeq
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tasweeq-db
+          property: connectionString
+
+databases:
+  - name: tasweeq-db
+    plan: free
+    databaseName: shop1_db
+    user: postgres

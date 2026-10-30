@@ -3,30 +3,46 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreOrderRequest;
+use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\PaymentMethod;
+use App\Models\CaptainRating;
+use App\Services\OrderNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;//طرق الدفع
-use App\Models\CaptainRating;
 
 class OrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::where('user_id', Auth::id())
-                       ->with(['items', 'statusHistory', 'captain', 'captainRating'])
-                       ->orderBy('created_at', 'desc')
-                       ->get();
-        
+        $query = Order::where('user_id', Auth::id())
+                       ->with(['items.product', 'statusHistory', 'captain', 'captainRating'])
+                       ->orderBy('created_at', 'desc');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('per_page')) {
+            $perPage = min(100, max(1, $request->integer('per_page', 15)));
+            $orders = $query->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => OrderResource::collection($orders)->response()->getData(true),
+            ]);
+        }
+
+        $orders = $query->get();
+
         return response()->json([
             'success' => true,
-            'data' => $orders
+            'data' => OrderResource::collection($orders),
         ]);
     }
 
@@ -37,68 +53,50 @@ class OrderController extends Controller
                           $query->where('user_id', Auth::id())
                                 ->orWhere('assigned_captain_id', Auth::id());
                       })
-                      ->with(['items', 'statusHistory', 'captain', 'captainRating'])
+                      ->with(['items.product', 'statusHistory', 'captain', 'captainRating'])
                       ->first();
-        
+
         if (!$order) {
             return response()->json([
                 'success' => false,
-                'message' => 'Order not found'
+                'message' => 'الطلب غير موجود',
             ], 404);
         }
-        
+
         return response()->json([
             'success' => true,
-            'data' => $order
+            'data' => new OrderResource($order),
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreOrderRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'customer_name' => 'required|string|max:100',
-            'customer_phone' => 'required|string|max:20',
-            'customer_email' => 'nullable|email|max:100',
-            'customer_address' => 'required|string',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'payment_method' => 'required|string|exists:payment_methods,code',
-            'transfer_number' => 'nullable|string|max:100',
-            'receipt_image' => 'nullable|image|max:2048',
-            'notes' => 'nullable|string'
-        ]);
+        $validated = $request->validated();
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $paymentMethod = PaymentMethod::where('code', $request->payment_method)
+        $paymentMethod = PaymentMethod::where('code', $validated['payment_method'])
             ->where('is_active', true)
             ->first();
 
         if (!$paymentMethod) {
             return response()->json([
                 'success' => false,
-                'message' => 'وسيلة الدفع غير متاحة حاليًا'
+                'message' => 'وسيلة الدفع غير متاحة حاليًا',
             ], 422);
         }
 
-        if ($request->payment_method !== 'cash' && !$request->hasFile('receipt_image')) {
+        if ($validated['payment_method'] !== 'cash' && !$request->hasFile('receipt_image')) {
             return response()->json([
                 'success' => false,
-                    'message' => 'يجب إرفاق صورة إيصال الدفع للوسائل غير النقدية'
+                'message' => 'يجب إرفاق صورة إيصال الدفع للوسائل غير النقدية',
             ], 422);
         }
 
         $cartItems = Cart::where('user_id', Auth::id())->get();
-        
+
         if ($cartItems->isEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cart is empty'
+                'message' => 'سلة المشتريات فارغة',
             ], 400);
         }
 
@@ -110,27 +108,46 @@ class OrderController extends Controller
 
             foreach ($cartItems as $cartItem) {
                 $product = Product::find($cartItem->product_id);
-                
-                if ($product->stock < $cartItem->quantity) {
+
+                if (!$product || $product->stock < $cartItem->quantity) {
                     DB::rollBack();
                     return response()->json([
                         'success' => false,
-                        'message' => "Not enough stock for {$product->name}"
+                        'message' => "الكمية المطلوبة غير متوفرة في المخزون للمنتج: " . ($product->name ?? 'غير معروف'),
                     ], 400);
                 }
-                
+
                 $subtotal = $product->price * $cartItem->quantity;
                 $totalAmount += $subtotal;
-                
+
                 $orderItems[] = [
+                    'product_id' => $product->id,
                     'product_name' => $product->name,
                     'price' => $product->price,
                     'quantity' => $cartItem->quantity,
-                    'subtotal' => $subtotal
+                    'subtotal' => $subtotal,
                 ];
-                
+
                 $product->stock -= $cartItem->quantity;
                 $product->save();
+            }
+
+            $subtotalAmount = $totalAmount;
+            $discountAmount = 0;
+            $coupon = null;
+
+            if (!empty($validated['coupon_code'])) {
+                $couponValidation = app(\App\Services\CouponService::class)->validateCoupon(
+                    $validated['coupon_code'],
+                    Auth::user(),
+                    $subtotalAmount
+                );
+
+                if ($couponValidation['valid']) {
+                    $coupon = \App\Models\Coupon::where('code', $couponValidation['code'])->first();
+                    $discountAmount = $couponValidation['discount_amount'];
+                    $totalAmount = $couponValidation['final_amount'];
+                }
             }
 
             $receiptPath = $request->hasFile('receipt_image')
@@ -139,49 +156,67 @@ class OrderController extends Controller
 
             $order = Order::create([
                 'user_id' => Auth::id(),
-                'customer_name' => $request->customer_name,
-                'customer_phone' => $request->customer_phone,
-                'customer_email' => $request->customer_email,
-                'customer_address' => $request->customer_address,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
+                'assigned_captain_id' => null,
+                'coupon_id' => $coupon?->id,
+                'coupon_code' => $coupon?->code,
+                'customer_name' => $validated['customer_name'],
+                'customer_phone' => $validated['customer_phone'],
+                'customer_email' => $validated['customer_email'] ?? null,
+                'customer_address' => $validated['customer_address'],
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'subtotal_amount' => $subtotalAmount,
+                'discount_amount' => $discountAmount,
                 'total_amount' => $totalAmount,
                 'captain_commission' => 0,
-                'payment_method' => $request->payment_method,
-                'transfer_number' => $request->transfer_number,
+                'payment_method' => $validated['payment_method'],
+                'transfer_number' => $validated['transfer_number'] ?? null,
                 'receipt_image' => $receiptPath,
-                'notes' => $request->notes,
+                'notes' => $validated['notes'] ?? null,
                 'status' => 'pending',
-                'is_paid' => 0
+                'is_paid' => 0,
             ]);
+
+            if ($coupon && $discountAmount > 0) {
+                app(\App\Services\CouponService::class)->applyCouponToOrder($coupon, $order, Auth::user(), $discountAmount);
+            }
 
             foreach ($orderItems as $item) {
                 OrderItem::create([
                     'order_id' => $order->id,
+                    'product_id' => $item['product_id'],
                     'product_name' => $item['product_name'],
                     'price' => $item['price'],
                     'quantity' => $item['quantity'],
-                    'subtotal' => $item['subtotal']
+                    'subtotal' => $item['subtotal'],
                 ]);
             }
 
-            $order->statusHistory()->create(['status' => 'pending', 'changed_by' => Auth::id()]);
+            $order->statusHistory()->create([
+                'status' => 'pending',
+                'changed_by' => Auth::id(),
+            ]);
 
             Cart::where('user_id', Auth::id())->delete();
 
             DB::commit();
 
+            // إرسال إشعار فوري للعميل بتأكيد إنشاء واستلام طلبه
+            app(OrderNotificationService::class)->notifyCustomerOrderCreated($order);
+
+            $order->load(['items.product', 'statusHistory']);
+
             return response()->json([
                 'success' => true,
-                'message' => 'Order created successfully',
-                'data' => $order->load('items')
+                'message' => 'تم إنشاء الطلب بنجاح',
+                'data' => new OrderResource($order),
             ], 201);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create order: ' . $e->getMessage()
+                'message' => 'فشل إنشاء الطلب: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -191,29 +226,34 @@ class OrderController extends Controller
         $order = Order::where('id', $id)
                       ->where('user_id', Auth::id())
                       ->first();
-        
+
         if (!$order) {
             return response()->json([
                 'success' => false,
-                'message' => 'Order not found'
+                'message' => 'الطلب غير موجود',
             ], 404);
         }
-        
+
         if ($order->status !== 'pending') {
             return response()->json([
                 'success' => false,
-                'message' => 'Order cannot be cancelled'
+                'message' => 'لا يمكن إلغاء الطلب بعد دخوله مرحلة التجهيز أو التوصيل',
             ], 400);
         }
 
         $order->status = 'cancelled';
         $order->save();
-        $order->statusHistory()->create(['status' => 'cancelled', 'changed_by' => Auth::id()]);
+        $order->statusHistory()->create([
+            'status' => 'cancelled',
+            'changed_by' => Auth::id(),
+        ]);
+
+        app(OrderNotificationService::class)->notifyCustomerOrderStatus($order, 'cancelled');
 
         return response()->json([
             'success' => true,
-            'message' => 'Order cancelled successfully',
-            'data' => $order
+            'message' => 'تم إلغاء الطلب بنجاح',
+            'data' => new OrderResource($order->load(['items', 'statusHistory'])),
         ]);
     }
 
@@ -225,15 +265,24 @@ class OrderController extends Controller
             ->first();
 
         if (!$order) {
-            return response()->json(['success' => false, 'message' => 'لا يمكن تقييم هذا الطلب حالياً'], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن تقييم هذا الطلب حالياً',
+            ], 422);
         }
 
         if (!$order->assigned_captain_id) {
-            return response()->json(['success' => false, 'message' => 'لا يوجد كابتن مرتبط بهذا الطلب'], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يوجد كابتن مرتبط بهذا الطلب',
+            ], 422);
         }
 
         if (CaptainRating::where('order_id', $order->id)->exists()) {
-            return response()->json(['success' => false, 'message' => 'تم تقييم هذا الطلب مسبقاً'], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'تم تقييم هذا الطلب مسبقاً',
+            ], 422);
         }
 
         $validated = $request->validate([
@@ -249,6 +298,10 @@ class OrderController extends Controller
             'comment' => $validated['comment'] ?? null,
         ]);
 
-        return response()->json(['success' => true, 'message' => 'تم إرسال تقييمك بنجاح', 'data' => $rating], 201);
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إرسال تقييمك بنجاح',
+            'data' => $rating,
+        ], 201);
     }
 }

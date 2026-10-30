@@ -8,15 +8,110 @@
         $editingProduct = request()->has('edit') ? \App\Models\Product::find(request('edit')) : null;
     @endphp
 
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 15px; flex-wrap: wrap;">
+    <!-- إحصائيات سريعة للمنتجات -->
+    <div class="stat-grid" style="margin-bottom: 22px;">
+        <div class="stat-card">
+            <div class="info">
+                <span class="title">إجمالي المنتجات</span>
+                <span class="value">{{ $stats['total'] ?? $products->total() }}</span>
+            </div>
+            <div class="icon-box">
+                <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="info">
+                <span class="title">متوفر بالمخزون</span>
+                <span class="value" style="color: var(--success);">{{ $stats['in_stock'] ?? 0 }}</span>
+            </div>
+            <div class="icon-box" style="background: rgba(39, 174, 96, 0.12); color: #168447;">
+                <i class="fa-solid fa-check-double"></i>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="info">
+                <span class="title">نفذت الكمية</span>
+                <span class="value" style="color: var(--danger);">{{ $stats['out_of_stock'] ?? 0 }}</span>
+            </div>
+            <div class="icon-box" style="background: rgba(255, 77, 77, 0.12); color: #c93636;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- شريط الإجراءات والفلترة -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap;">
         <button class="btn btn-primary" onclick="document.getElementById('product-form-panel').style.display='block'; window.scrollTo({top: 0, behavior: 'smooth'});">
             <i class="fa-solid fa-plus"></i>
             <span>إضافة منتج جديد</span>
         </button>
-        <div style="position: relative; flex: 1; min-width: 260px;">
-            <i class="fa-solid fa-magnifying-glass" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
-            <input type="text" id="productSearchInput" onkeyup="filterProducts()" placeholder="ابحث باسم المنتج أو التصنيف..." style="width: 100%; padding: 12px 42px 12px 16px; border-radius: 14px; border: 1px solid var(--border); outline: none;">
-        </div>
+    </div>
+
+    <!-- بطاقة الفلترة المتقدمة للمنتجات -->
+    <div class="filter-card">
+        <form action="{{ route('admin.products') }}" method="GET" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; align-items: end;">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">
+                    <i class="fa-solid fa-magnifying-glass" style="margin-left: 4px;"></i>
+                    البحث
+                </label>
+                <input type="text" name="q" value="{{ request('q') }}" placeholder="ابحث باسم المنتج أو الوصف..." style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%;">
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">
+                    <i class="fa-solid fa-tag" style="margin-left: 4px;"></i>
+                    التصنيف
+                </label>
+                <select name="category_id" style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%; background: white;">
+                    <option value="">-- كل التصنيفات --</option>
+                    @foreach($categories as $category)
+                        <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
+                            {{ $category->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">
+                    <i class="fa-solid fa-warehouse" style="margin-left: 4px;"></i>
+                    حالة المخزون
+                </label>
+                <select name="stock_status" style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%; background: white;">
+                    <option value="">-- الكل --</option>
+                    <option value="in_stock" {{ request('stock_status') == 'in_stock' ? 'selected' : '' }}>متوفر بالمخزون</option>
+                    <option value="low_stock" {{ request('stock_status') == 'low_stock' ? 'selected' : '' }}>مخزون منخفض (تنبيه)</option>
+                    <option value="out_of_stock" {{ request('stock_status') == 'out_of_stock' ? 'selected' : '' }}>نفذت الكمية (0)</option>
+                </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-muted);">
+                    <i class="fa-solid fa-arrow-down-wide-short" style="margin-left: 4px;"></i>
+                    الترتيب
+                </label>
+                <select name="sort" style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%; background: white;">
+                    <option value="latest" {{ request('sort') == 'latest' ? 'selected' : '' }}>الأحدث أولاً</option>
+                    <option value="price_asc" {{ request('sort') == 'price_asc' ? 'selected' : '' }}>الأقل سعراً</option>
+                    <option value="price_desc" {{ request('sort') == 'price_desc' ? 'selected' : '' }}>الأعلى سعراً</option>
+                    <option value="stock_desc" {{ request('sort') == 'stock_desc' ? 'selected' : '' }}>الأكثر كمية</option>
+                    <option value="name_asc" {{ request('sort') == 'name_asc' ? 'selected' : '' }}>الاسم (أ - ي)</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1; height: 42px;">
+                    <i class="fa-solid fa-filter"></i>
+                    <span>تصفية</span>
+                </button>
+                @if(request()->anyFilled(['q', 'category_id', 'stock_status', 'sort']))
+                    <a href="{{ route('admin.products') }}" class="btn btn-outline" style="height: 42px;" title="إعادة ضبط">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </a>
+                @endif
+            </div>
+        </form>
     </div>
 
     @if($selectedCategory)
@@ -76,6 +171,10 @@
                     <input type="number" name="stock" value="{{ old('stock', $editingProduct->stock ?? 0) }}" style="padding: 12px; border-radius: 12px; border: 1px solid var(--border);" required>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <label style="font-weight: 700; font-size: 13px;">حد تنبيه المخزون المنخفض</label>
+                    <input type="number" name="low_stock_threshold" value="{{ old('low_stock_threshold', $editingProduct->low_stock_threshold ?? 5) }}" style="padding: 12px; border-radius: 12px; border: 1px solid var(--border);" placeholder="5">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label style="font-weight: 700; font-size: 13px;">صورة المنتج</label>
                     <input type="file" name="image" accept="image/*" style="padding: 9px; border-radius: 12px; border: 1px solid var(--border); background: white;">
                 </div>
@@ -108,10 +207,22 @@
                         </div>
                     @endif
                     <div style="position: absolute; top: 12px; left: 12px;">
-                        <span class="status-badge {{ $product->stock > 0 ? 'status-success' : 'status-danger' }}" style="font-size: 11px;">
-                            <i class="fa-solid {{ $product->stock > 0 ? 'fa-check' : 'fa-xmark' }}" style="font-size: 10px;"></i>
-                            <span>{{ $product->stock > 0 ? $product->stock . ' متوفر' : 'نفذت الكمية' }}</span>
-                        </span>
+                        @if($product->stock <= 0)
+                            <span class="status-badge status-danger" style="font-size: 11px;">
+                                <i class="fa-solid fa-xmark" style="font-size: 10px;"></i>
+                                <span>نفذت الكمية</span>
+                            </span>
+                        @elseif($product->is_low_stock)
+                            <span class="status-badge status-pending" style="font-size: 11px;">
+                                <i class="fa-solid fa-triangle-exclamation" style="font-size: 10px;"></i>
+                                <span>منخفض (باقي {{ $product->stock }})</span>
+                            </span>
+                        @else
+                            <span class="status-badge status-success" style="font-size: 11px;">
+                                <i class="fa-solid fa-check" style="font-size: 10px;"></i>
+                                <span>{{ $product->stock }} متوفر</span>
+                            </span>
+                        @endif
                     </div>
                 </div>
                 <div style="padding: 16px; flex: 1; display: flex; flex-direction: column;">
@@ -131,7 +242,7 @@
                     </div>
                     
                     <div style="display: flex; gap: 8px; border-top: 1px solid var(--border); padding-top: 14px;">
-                        <a href="{{ route('admin.products', ['edit' => $product->id, 'category_id' => request('category_id', $product->category_id)]) }}" class="btn btn-outline" style="flex: 1; font-size: 12px; padding: 8px;">
+                        <a href="{{ route('admin.products', array_merge(request()->query(), ['edit' => $product->id])) }}" class="btn btn-outline" style="flex: 1; font-size: 12px; padding: 8px;">
                             <i class="fa-solid fa-pen-to-square"></i>
                             <span>تعديل</span>
                         </a>
@@ -151,27 +262,18 @@
         @empty
             <div class="panel" style="grid-column: 1 / -1; text-align: center; padding: 50px; color: var(--text-muted);">
                 <i class="fa-solid fa-boxes-stacked" style="font-size: 38px; margin-bottom: 12px; color: #CCD2D6; display: block;"></i>
-                لا توجد منتجات مسجلة حالياً
+                لا توجد منتجات مطابقة لخيارات البحث أو الفلترة
             </div>
         @endforelse
     </div>
 
-    <script>
-        function filterProducts() {
-            const input = document.getElementById('productSearchInput');
-            const filter = input.value.toLowerCase();
-            const cards = document.getElementsByClassName('product-card-item');
-
-            for (let i = 0; i < cards.length; i++) {
-                const title = cards[i].querySelector('.product-title-text');
-                const cat = cards[i].querySelector('.product-category-text');
-                const text = (title ? title.innerText : '') + ' ' + (cat ? cat.innerText : '');
-                if (text.toLowerCase().indexOf(filter) > -1) {
-                    cards[i].style.display = "flex";
-                } else {
-                    cards[i].style.display = "none";
-                }
-            }
-        }
-    </script>
+    <!-- الترقيم والتنقل بين الصفحات -->
+    <div class="pagination-container">
+        <div class="info-text">
+            عرض <strong>{{ $products->firstItem() ?? 0 }}</strong> إلى <strong>{{ $products->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $products->total() }}</strong> منتج
+        </div>
+        <div>
+            {{ $products->links() }}
+        </div>
+    </div>
 @endsection

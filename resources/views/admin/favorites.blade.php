@@ -4,6 +4,24 @@
 @section('page_title', 'قائمة المنتجات المفضلة لدى العملاء')
 
 @section('content')
+    <!-- شريط البحث السريع للمفضلة -->
+    <div class="filter-card">
+        <form action="{{ route('admin.favorites') }}" method="GET" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 250px;">
+                <input type="text" name="q" value="{{ request('q') }}" placeholder="ابحث باسم العميل أو البريد أو اسم المنتج..." style="padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); width: 100%;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="height: 42px;">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <span>بحث</span>
+            </button>
+            @if(request()->filled('q'))
+                <a href="{{ route('admin.favorites') }}" class="btn btn-outline" style="height: 42px;" title="إعادة ضبط">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </a>
+            @endif
+        </form>
+    </div>
+
     <div class="panel">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; gap:15px; flex-wrap:wrap;">
             <div>
@@ -15,7 +33,7 @@
             </div>
             <div style="background: white; padding: 8px 18px; border-radius: 99px; border: 1px solid var(--border); font-weight: 700; color: #FF4D4D; font-size: 13px; display: flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-heart"></i>
-                <span>{{ $favorites->count() }} عنصر في المفضلة</span>
+                <span>إجمالي العناصر: {{ $favorites->total() }}</span>
             </div>
         </div>
         <div class="table-responsive">
@@ -50,12 +68,22 @@
                         <tr>
                             <td colspan="6" style="text-align:center; padding:40px; color: var(--text-muted);">
                                 <i class="fa-solid fa-heart-crack" style="font-size: 32px; display: block; margin-bottom: 10px; color: #CCD2D6;"></i>
-                                لا توجد منتجات مضافة للمفضلة حاليًا
+                                لا توجد منتجات مطابقة في المفضلة حاليًا
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <!-- الترقيم والتنقل بين الصفحات -->
+    <div class="pagination-container">
+        <div class="info-text">
+            عرض <strong>{{ $favorites->firstItem() ?? 0 }}</strong> إلى <strong>{{ $favorites->lastItem() ?? 0 }}</strong> من إجمالي <strong>{{ $favorites->total() }}</strong> عنصر
+        </div>
+        <div>
+            {{ $favorites->links() }}
         </div>
     </div>
 @endsection

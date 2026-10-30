@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\MarketingSlider;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
@@ -14,147 +16,129 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $query = Product::with('category');
-        
-        // Filter by category
-        if ($request->has('category_id')) {
+
+        // فلترة بالتصنيف
+        if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
         }
-        
-        // Search
-        if ($request->has('search')) {
-            $query->where(function ($searchQuery) use ($request) {
-                $searchQuery->where('name', 'like', '%' . $request->search . '%')
-                            ->orWhere('details', 'like', '%' . $request->search . '%');
+
+        // فلترة بالبحث
+        if ($request->filled('search') || $request->filled('q')) {
+            $search = $request->get('search', $request->get('q'));
+            $query->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('details', 'like', '%' . $search . '%');
             });
         }
-        
-        // Sort
-        if ($request->has('sort')) {
-            switch ($request->sort) {
-                case 'price_asc':
-                    $query->orderBy('price', 'asc');
-                    break;
-                case 'price_desc':
-                    $query->orderBy('price', 'desc');
-                    break;
-                case 'newest':
-                    $query->orderBy('created_at', 'desc');
-                    break;
-                default:
-                    $query->orderBy('created_at', 'desc');
-            }
-        } else {
-            $query->orderBy('created_at', 'desc');
+
+        // فلترة بنطاق السعر
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', (float) $request->min_price);
         }
-        
-        $products = $query->paginate($request->per_page ?? 20);
-        
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', (float) $request->max_price);
+        }
+
+        // فلترة بحالة التوفر في المخزون
+        if ($request->boolean('in_stock')) {
+            $query->where('stock', '>', 0);
+        }
+
+        // الترتيب
+        switch ($request->get('sort')) {
+            case 'price_asc':
+                $query->orderBy('price', 'asc');
+                break;
+            case 'price_desc':
+                $query->orderBy('price', 'desc');
+                break;
+            case 'popular':
+                $query->withCount('orderItems')->orderBy('order_items_count', 'desc');
+                break;
+            case 'newest':
+            default:
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        $perPage = min(100, max(1, $request->integer('per_page', 20)));
+        $products = $query->paginate($perPage);
+
         return response()->json([
             'success' => true,
-            'data' => $products
+            'data' => ProductResource::collection($products)->response()->getData(true),
         ]);
     }
 
     public function show($id)
     {
         $product = Product::with('category')->find($id);
-        
+
         if (!$product) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product not found'
+                'message' => 'المنتج غير موجود',
             ], 404);
         }
-        
+
         return response()->json([
             'success' => true,
-            'data' => $product
+            'data' => new ProductResource($product),
         ]);
     }
 
     public function getSliders()
     {
         $sliders = MarketingSlider::all();
-        
+
         return response()->json([
             'success' => true,
-            'data' => $sliders
+            'data' => $sliders,
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric',
-            'currency' => 'required|string|max:10',
-            'details' => 'nullable|string',
-            'image' => 'required|image|max:2048',
-            'category_id' => 'required|exists:categories,id',
-            'stock' => 'required|integer|min:0'
-        ]);
-        
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-        
+        $validated = $request->validated();
+
         $product = new Product();
-        $product->name = $request->name;
-        $product->price = $request->price;
-        $product->currency = $request->currency;
-        $product->details = $request->details;
-        $product->category_id = $request->category_id;
-        $product->stock = $request->stock;
-        
+        $product->name = $validated['name'];
+        $product->price = $validated['price'];
+        $product->currency = $validated['currency'];
+        $product->details = $validated['details'] ?? null;
+        $product->category_id = $validated['category_id'];
+        $product->stock = $validated['stock'];
+
         if ($request->hasFile('image')) {
             $image = $request->file('image');
             $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             $path = $image->storeAs('products', $imageName, 'public');
             $product->image = $path;
         }
-        
+
         $product->save();
-        
+
         return response()->json([
             'success' => true,
-            'message' => 'Product created successfully',
-            'data' => $product
+            'message' => 'تم إنشاء المنتج بنجاح',
+            'data' => new ProductResource($product),
         ], 201);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateProductRequest $request, $id)
     {
         $product = Product::find($id);
-        
+
         if (!$product) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product not found'
+                'message' => 'المنتج غير موجود',
             ], 404);
         }
-        
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'price' => 'sometimes|numeric',
-            'currency' => 'sometimes|string|max:10',
-            'details' => 'nullable|string',
-            'image' => 'nullable|image|max:2048',
-            'category_id' => 'sometimes|exists:categories,id',
-            'stock' => 'sometimes|integer|min:0'
-        ]);
-        
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-        
-        $product->fill($request->only(['name', 'price', 'currency', 'details', 'category_id', 'stock']));
-        
+
+        $validated = $request->validated();
+        $product->fill($validated);
+
         if ($request->hasFile('image')) {
             if ($product->image) {
                 Storage::disk('public')->delete($product->image);
@@ -164,36 +148,36 @@ class ProductController extends Controller
             $path = $image->storeAs('products', $imageName, 'public');
             $product->image = $path;
         }
-        
+
         $product->save();
-        
+
         return response()->json([
             'success' => true,
-            'message' => 'Product updated successfully',
-            'data' => $product
+            'message' => 'تم تحديث بيانات المنتج بنجاح',
+            'data' => new ProductResource($product),
         ]);
     }
 
     public function destroy($id)
     {
         $product = Product::find($id);
-        
+
         if (!$product) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product not found'
+                'message' => 'المنتج غير موجود',
             ], 404);
         }
-        
+
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
         }
-        
+
         $product->delete();
-        
+
         return response()->json([
             'success' => true,
-            'message' => 'Product deleted successfully'
+            'message' => 'تم حذف المنتج بنجاح',
         ]);
     }
 }

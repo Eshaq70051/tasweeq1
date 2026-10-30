@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CategoryResource;
+use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -12,45 +14,57 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::all();
+        $categories = Category::withCount('products')->orderBy('name')->get();
 
         return response()->json([
             'success' => true,
-            'data' => $categories
+            'data' => CategoryResource::collection($categories),
         ]);
     }
 
     public function show($id)
+    {
+        $category = Category::withCount('products')->find($id);
+
+        if (!$category) {
+            return response()->json([
+                'success' => false,
+                'message' => 'التصنيف غير موجود',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => new CategoryResource($category),
+        ]);
+    }
+
+    public function products($id, Request $request)
     {
         $category = Category::find($id);
 
         if (!$category) {
             return response()->json([
                 'success' => false,
-                'message' => 'Category not found'
+                'message' => 'التصنيف غير موجود',
             ], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $category
-        ]);
-    }
+        $query = $category->products()->latest();
 
-    public function products($id)
-    {
-        $category = Category::with('products')->find($id);
-
-        if (!$category) {
+        if ($request->has('per_page')) {
+            $products = $query->paginate($request->integer('per_page', 20));
             return response()->json([
-                'success' => false,
-                'message' => 'Category not found'
-            ], 404);
+                'success' => true,
+                'data' => ProductResource::collection($products)->response()->getData(true),
+            ]);
         }
+
+        $products = $query->get();
 
         return response()->json([
             'success' => true,
-            'data' => $category->products
+            'data' => ProductResource::collection($products),
         ]);
     }
 
@@ -59,13 +73,13 @@ class CategoryController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:100',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|max:2048'
+            'image' => 'nullable|image|max:2048',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -79,8 +93,8 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Category created successfully',
-            'data' => $category
+            'message' => 'تم إنشاء التصنيف بنجاح',
+            'data' => new CategoryResource($category),
         ], 201);
     }
 
@@ -91,20 +105,20 @@ class CategoryController extends Controller
         if (!$category) {
             return response()->json([
                 'success' => false,
-                'message' => 'Category not found'
+                'message' => 'التصنيف غير موجود',
             ], 404);
         }
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:100',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|max:2048'
+            'image' => 'nullable|image|max:2048',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -122,8 +136,8 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Category updated successfully',
-            'data' => $category
+            'message' => 'تم تحديث التصنيف بنجاح',
+            'data' => new CategoryResource($category),
         ]);
     }
 
@@ -134,7 +148,7 @@ class CategoryController extends Controller
         if (!$category) {
             return response()->json([
                 'success' => false,
-                'message' => 'Category not found'
+                'message' => 'التصنيف غير موجود',
             ], 404);
         }
 
@@ -146,7 +160,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Category deleted successfully'
+            'message' => 'تم حذف التصنيف بنجاح',
         ]);
     }
 }

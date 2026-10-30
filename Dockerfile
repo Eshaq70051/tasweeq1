@@ -1,21 +1,41 @@
-FROM serversideup/php:8.5-fpm-nginx
+FROM php:8.3-fpm-alpine
 
-WORKDIR /var/www/html
+# Set working directory
+WORKDIR /var/www
 
-COPY --chown=www-data:www-data . /var/www/html
+# Install system dependencies
+RUN apk add --no-cache \
+    nginx \
+    curl \
+    libpng-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    postgresql-dev \
+    oniguruma-dev
 
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+# Install PHP extensions
+RUN docker-php-ext-install pdo pdo_pgsql pgsql mbstring exif pcntl bcmath gd zip
 
-ENV APP_ENV=production \
-    APP_DEBUG=false \
-    LOG_CHANNEL=stderr \
-    NGINX_WEBROOT=/var/www/html/public \
-    AUTORUN_ENABLED=true \
-    AUTORUN_LARAVEL_STORAGE_LINK=false \
-    AUTORUN_LARAVEL_MIGRATION=true \
-    AUTORUN_LARAVEL_MIGRATION_FORCE=true \
-    AUTORUN_LARAVEL_OPTIMIZE=false \
-    AUTORUN_LARAVEL_CONFIG_CACHE=true \
-    AUTORUN_LARAVEL_ROUTE_CACHE=true \
-    AUTORUN_LARAVEL_VIEW_CACHE=false \
-    AUTORUN_LARAVEL_EVENT_CACHE=false
+# Get latest Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# Copy application files
+COPY . /var/www
+
+# Install production dependencies
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
+    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
+# Setup Nginx & entrypoint
+COPY docker/nginx.conf /etc/nginx/http.d/default.conf
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 80
+
+CMD ["/usr/local/bin/entrypoint.sh"]

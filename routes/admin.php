@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Admin\PaymentMethodController;
+use App\Http\Controllers\Admin\CouponController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
@@ -46,6 +47,13 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('/orders/{order}/paid', [OrderController::class, 'markPaidFromWeb'])->name('admin.orders.markPaid');
     Route::post('/orders/{order}/assign', [AdminPanelController::class, 'assignCaptain'])->name('admin.orders.assignCaptain');
     
+    // Coupons & Promo Codes
+    Route::get('/coupons', [CouponController::class, 'index'])->name('admin.coupons');
+    Route::post('/coupons', [CouponController::class, 'store'])->name('admin.coupons.store');
+    Route::post('/coupons/{coupon}/update', [CouponController::class, 'update'])->name('admin.coupons.update');
+    Route::post('/coupons/{coupon}/toggle', [CouponController::class, 'toggle'])->name('admin.coupons.toggle');
+    Route::post('/coupons/{coupon}/delete', [CouponController::class, 'destroy'])->name('admin.coupons.delete');
+
     // Sliders
     Route::get('/sliders', [SliderController::class, 'index'])->name('admin.sliders');
     Route::post('/sliders', [SliderController::class, 'store'])->name('admin.sliders.store');

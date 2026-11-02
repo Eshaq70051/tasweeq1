@@ -1,0 +1,109 @@
+[
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/08/22/1692693836a928e7e1f40d1aa55dcfca58fbe567ad_thumbnail_720x.webp",
+    "path": "storage/app/public/products/1692693836a928e7e1f40d1aa55dcfca58fbe567ad_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/08/17/1692257257c79e604f32e6503c5b9679ec68ea3f2b_thumbnail_720x.webp",
+    "path": "storage/app/public/products/1692257257c79e604f32e6503c5b9679ec68ea3f2b_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/06/12/1686550742f5dcff1be78263158c4e09e3a39e83df_thumbnail_720x.webp",
+    "path": "storage/app/public/products/1686550742f5dcff1be78263158c4e09e3a39e83df_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/05/29/1685348873bb7790b5ba596f01bbbe9659b97b0a7c_thumbnail_720x.webp",
+    "path": "storage/app/public/products/1685348873bb7790b5ba596f01bbbe9659b97b0a7c_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/09/20/16951915995574cb4f5b331ea06149f123c5097bc7_thumbnail_720x.webp",
+    "path": "storage/app/public/products/16951915995574cb4f5b331ea06149f123c5097bc7_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/04/18/16817871239c09c313a48e77c8e9b41a31dceaeeb4_thumbnail_720x.webp",
+    "path": "storage/app/public/products/16817871239c09c313a48e77c8e9b41a31dceaeeb4_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/08/15/1692087541e2ee04c2c1a6b0cfa0b86a073f4e1f7a_thumbnail_720x.webp",
+    "path": "storage/app/public/products/1692087541e2ee04c2c1a6b0cfa0b86a073f4e1f7a_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/07/04/1688461757ff54f489f664a85eead0a010419356cb_thumbnail_720x.webp",
+    "path": "storage/app/public/products/1688461757ff54f489f664a85eead0a010419356cb_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/08/07/169138096338e55e4d1b82ad0a4bb6d0f622949ff2_thumbnail_720x.webp",
+    "path": "storage/app/public/products/169138096338e55e4d1b82ad0a4bb6d0f622949ff2_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2022/11/08/166789953938b813b190f8ce817d29ec49aa16518a_thumbnail_720x.webp",
+    "path": "storage/app/public/products/166789953938b813b190f8ce817d29ec49aa16518a_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/06/20/1687250682281df6f80d0d58849b2ae95d13a69a47_thumbnail_720x.webp",
+    "path": "storage/app/public/products/1687250682281df6f80d0d58849b2ae95d13a69a47_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "url": "https://img.ltwebstatic.com/images3_pi/2023/04/24/16823055964aa8a964104975769741b7f83736ad90_thumbnail_720x.webp",
+    "path": "storage/app/public/products/16823055964aa8a964104975769741b7f83736ad90_thumbnail_720x.webp",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "path": "storage/app/public/products/1686553895.jpg",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "path": "storage/app/public/products/698c628c8d608.jpg",
+    "error": "<urlopen error [WinError 10054] An existing connection was forcibly closed by the remote host>"
+  },
+  {
+    "status": "failed",
+    "path": "storage/app/public/products/698ace59f2e58.jpg",
+    "error": "<urlopen error [WinError 10054] An existing connection was forcibly closed by the remote host>"
+  },
+  {
+    "status": "failed",
+    "path": "storage/app/public/products/1792402332.jpg",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "path": "storage/app/public/products/1775306250.jpg",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "path": "storage/app/public/products/1773281602.jpg",
+    "error": "HTTP 404: Not Found"
+  },
+  {
+    "status": "failed",
+    "path": "storage/app/public/products/1793539185.jpg",
+    "error": "HTTP 404: Not Found"
+  }
+]

@@ -10,12 +10,15 @@ use App\Models\Cart;
 use App\Models\Favorite;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Store;
 use App\Models\User;
 use App\Models\SiteSetting;
 use App\Models\CaptainPayment;
 use App\Models\PaymentMethod;
 use App\Services\OrderNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AdminPanelController extends Controller
@@ -23,6 +26,7 @@ class AdminPanelController extends Controller
     public function dashboard()
     {
         $stats = [
+            'total_stores' => Store::count(),
             'total_orders' => Order::count(),
             'total_users' => User::count(),
             'total_products' => Product::count(),
@@ -96,6 +100,7 @@ class AdminPanelController extends Controller
 
         $products = $productsQuery->paginate(12)->withQueryString();
         $categories = Category::orderBy('name')->get();
+        $stores = Store::orderBy('name')->get();
 
         $stats = [
             'total' => Product::count(),
@@ -104,7 +109,7 @@ class AdminPanelController extends Controller
             'out_of_stock' => Product::where('stock', '<=', 0)->count(),
         ];
 
-        return view('admin.products', compact('products', 'categories', 'selectedCategory', 'stats'));
+        return view('admin.products', compact('products', 'categories', 'stores', 'selectedCategory', 'stats'));
     }
 
     public function orders(Request $request)
@@ -164,7 +169,10 @@ class AdminPanelController extends Controller
             'cancelled' => Order::where('status', 'cancelled')->count(),
         ];
 
-        $captains = User::where('role', 'captain')->where('status', 'active')->orderBy('name')->get();
+        $captains = User::where('role', 'captain')
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
         $paymentMethods = PaymentMethod::all();
 
         return view('admin.orders', compact('orders', 'captains', 'statusCounts', 'paymentMethods'));
@@ -197,9 +205,17 @@ class AdminPanelController extends Controller
     public function assignCaptain(Request $request, Order $order)
     {
         $request->validate([
-            'captain_id' => 'required|exists:users,id,role,captain,status,active',
+            'captain_id' => [
+                'required',
+                Rule::exists('users', 'id')
+                    ->where('role', 'captain')
+                    ->where('status', 'active')
+                    ->where('is_available', true),
+            ],
+        ], [
+            'captain_id.exists' => 'لا يمكن إسناد الطلب إلا لكابتن متصل ونشط',
         ]);
-        $captain = User::find($request->captain_id);
+        $captain = User::findOrFail($request->captain_id);
         $order->assigned_captain_id = $request->captain_id;
         if ($order->status == 'pending') {
             $order->status = 'processing';
@@ -207,7 +223,7 @@ class AdminPanelController extends Controller
         $order->save();
         $order->statusHistory()->create([
             'status' => $order->status,
-            'changed_by' => auth()->id(),
+            'changed_by' => Auth::id(),
         ]);
 
         // إرسال إشعار فوري للكابتن والعميل عبر FCM
@@ -294,7 +310,7 @@ class AdminPanelController extends Controller
         }
         $captainPayment->update([
             'status' => 'approved',
-            'approved_by' => auth()->id(),
+            'approved_by' => Auth::id(),
             'approved_at' => now(),
         ]);
 
@@ -308,7 +324,7 @@ class AdminPanelController extends Controller
     public function captainDetails(User $captain)
     {
         abort_unless($captain->role === 'captain', 404);
-        
+
         $summary = app(\App\Services\CaptainWalletService::class)->getCaptainFinancialSummary($captain);
         $orders = Order::with('statusHistory')->where('assigned_captain_id', $captain->id)->latest()->take(20)->get();
         $payments = CaptainPayment::where('captain_id', $captain->id)->latest()->take(20)->get();
@@ -320,6 +336,62 @@ class AdminPanelController extends Controller
         $earnedCommission = $summary['earned_commission'];
 
         return view('admin.captain-detail', compact('captain', 'orders', 'payments', 'ledger', 'cashCollected', 'paidDebt', 'debt', 'earnedCommission', 'summary'));
+    }
+
+    public function updateCaptain(Request $request, User $captain)
+    {
+        abort_unless($captain->isCaptain(), 404);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:30',
+            'email' => [
+                'required',
+                'email',
+                'max:255',
+                \Illuminate\Validation\Rule::unique('users', 'email')->ignore($captain->id),
+            ],
+            'password' => 'nullable|string|min:6',
+            'status' => 'required|in:active,inactive',
+            'is_available' => 'nullable|boolean',
+            'avatar' => 'nullable|image|max:2048',
+        ], [
+            'name.required' => 'اسم الكابتن مطلوب',
+            'email.required' => 'البريد الإلكتروني مطلوب',
+            'email.email' => 'يرجى إدخال بريد إلكتروني صالح',
+            'email.unique' => 'هذا البريد الإلكتروني مسجل لحساب آخر',
+            'password.min' => 'كلمة المرور يجب ألا تقل عن 6 أحرف',
+            'status.required' => 'حالة الحساب مطلوبة',
+        ]);
+
+        if (!$request->boolean('is_available') && Order::where('assigned_captain_id', $captain->id)
+            ->whereIn('status', ['pending', 'confirmed', 'processing', 'arrived_store', 'on_the_way'])
+            ->exists()) {
+            return redirect()->back()->withErrors([
+                'is_available' => 'لا يمكن إغلاق حالة الكابتن قبل إكمال توصيل الطلبات النشطة',
+            ]);
+        }
+
+        $captain->name = $validated['name'];
+        $captain->email = $validated['email'];
+        $captain->phone = $validated['phone'] ?? null;
+        $captain->status = $validated['status'];
+        $captain->is_available = $request->boolean('is_available');
+
+        if (!empty($validated['password'])) {
+            $captain->password = Hash::make($validated['password']);
+        }
+
+        if ($request->hasFile('avatar')) {
+            if ($captain->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($captain->avatar)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($captain->avatar);
+            }
+            $captain->avatar = $request->file('avatar')->store('avatars', 'public');
+        }
+
+        $captain->save();
+
+        return redirect()->back()->with('success', "تم تحديث بيانات الكابتن '{$captain->name}' بنجاح");
     }
 
     public function storeUser(StoreUserRequest $request)
@@ -379,7 +451,7 @@ class AdminPanelController extends Controller
 
     public function deleteUser(User $user)
     {
-        if ($user->id === auth()->id()) {
+        if ($user->id === Auth::id()) {
             return redirect()->back()->with('error', 'لا يمكن حذف حسابك الحالي');
         }
         $user->delete();

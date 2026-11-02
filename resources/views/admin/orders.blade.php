@@ -171,8 +171,8 @@
                                     <select name="captain_id" onchange="this.form.submit()" style="padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px; outline: none; background: white; color: var(--text-main); max-width: 160px;">
                                         <option value="">-- اختر كابتن --</option>
                                         @foreach($captains as $captain)
-                                            <option value="{{ $captain->id }}" {{ $order->assigned_captain_id == $captain->id ? 'selected' : '' }}>
-                                                {{ $captain->name }}
+                                            <option value="{{ $captain->id }}" {{ $order->assigned_captain_id == $captain->id ? 'selected' : '' }} {{ !$captain->is_available ? 'disabled' : '' }}>
+                                                {{ $captain->name }}{{ $captain->is_available ? '' : ' (غير متصل)' }}
                                             </option>
                                         @endforeach
                                     </select>

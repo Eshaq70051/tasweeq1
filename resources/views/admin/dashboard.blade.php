@@ -1,28 +1,20 @@
 @extends('admin.layout')
 
 @section('title', 'لوحة التحكم | تسويق')
-@section('page_title', 'نظرة عامة على المتجر')
+@section('page_title', 'نظرة عامة على التطبيق')
 
 @section('content')
-    @if(($stats['low_stock_products'] ?? 0) > 0)
-        <div class="panel" style="background: rgba(242, 153, 74, 0.08); border: 1px solid rgba(242, 153, 74, 0.3); display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; flex-wrap: wrap; gap: 12px; padding: 16px 20px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(242, 153, 74, 0.18); color: #B96818; display: flex; align-items: center; justify-content: center; font-size: 18px;">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                </div>
-                <div>
-                    <h4 style="margin: 0 0 2px; font-size: 14px; font-weight: 800; color: #B96818;">تنبيه مخزون منخفض</h4>
-                    <span style="font-size: 12px; color: var(--text-muted);">يوجد <strong>{{ $stats['low_stock_products'] }}</strong> منتجات قاربت كميتها على النفاد في المخزون</span>
-                </div>
-            </div>
-            <a href="{{ route('admin.products', ['stock_status' => 'low_stock']) }}" class="btn btn-outline" style="border-color: #F2994A; color: #B96818; font-size: 12px;">
-                <span>معاينة المنتجات</span>
-                <i class="fa-solid fa-arrow-left"></i>
-            </a>
-        </div>
-    @endif
-
     <div class="stat-grid">
+        <div class="stat-card">
+            <div class="info">
+                <span class="title">المتاجر والمطاعم</span>
+                <span class="value">{{ number_format($stats['total_stores'] ?? \App\Models\Store::count()) }}</span>
+            </div>
+            <div class="icon-box" style="background: rgba(6, 132, 148, 0.1); color: var(--primary);">
+                <i class="fa-solid fa-store"></i>
+            </div>
+        </div>
+
         <div class="stat-card">
             <div class="info">
                 <span class="title">إجمالي الطلبات</span>
@@ -45,19 +37,14 @@
 
         <div class="stat-card">
             <div class="info">
-                <span class="title">إجمالي العملاء والمستخدمين</span>
+                <span class="title">إجمالي العملاء والكباتن</span>
                 <span class="value">{{ number_format($stats['total_users'] ?? 0) }}</span>
             </div>
             <div class="icon-box" style="background: rgba(45, 156, 219, 0.1); color: #2D9CDB;">
                 <i class="fa-solid fa-users"></i>
             </div>
         </div>
-
-        <div class="stat-card">
-            <div class="info">
-                <span class="title">طلبات اليوم</span>
-                <span class="value">{{ number_format($stats['today_orders'] ?? 0) }}</span>
-            </div>
+    </div>
             <div class="icon-box" style="background: rgba(242, 153, 74, 0.12); color: #F2994A;">
                 <i class="fa-solid fa-cart-shopping"></i>
             </div>

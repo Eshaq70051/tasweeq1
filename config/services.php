@@ -41,6 +41,10 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    'eshaq' => [
+        'base_url' => env('ESHAQ_BASE_URL'),
+    ],
+
     'fcm' => [
         'server_key' => env('FIREBASE_SERVER_KEY'),
         'project_id' => env('FIREBASE_PROJECT_ID'),

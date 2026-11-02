@@ -48,10 +48,14 @@ class OrderController extends Controller
 
     public function show($id)
     {
+        $user = Auth::user();
         $order = Order::where('id', $id)
-                      ->where(function ($query) {
-                          $query->where('user_id', Auth::id())
-                                ->orWhere('assigned_captain_id', Auth::id());
+                      ->where(function ($query) use ($user) {
+                          $query->where('user_id', $user->id)
+                                ->orWhere('assigned_captain_id', $user->id);
+                          if ($user && method_exists($user, 'isCaptain') && $user->isCaptain()) {
+                              $query->orWhereNull('assigned_captain_id');
+                          }
                       })
                       ->with(['items.product', 'statusHistory', 'captain', 'captainRating'])
                       ->first();
@@ -84,21 +88,68 @@ class OrderController extends Controller
             ], 422);
         }
 
-        if ($validated['payment_method'] !== 'cash' && !$request->hasFile('receipt_image')) {
+        if ($paymentMethod->requires_receipt && !$request->hasFile('receipt_image')) {
             return response()->json([
                 'success' => false,
-                'message' => 'يجب إرفاق صورة إيصال الدفع للوسائل غير النقدية',
+                'message' => 'يجب إرفاق صورة إيصال الدفع لهذه الوسيلة',
             ], 422);
         }
 
-        $cartItems = Cart::where('user_id', Auth::id())->get();
+        // إعداد عناصر الطلب سواءً تم إرسالها مباشرة في الطلب أو جلبت من جدول السلة
+        $itemsData = [];
+        $rawItems = $request->input('items', $validated['items'] ?? null);
+        if (is_string($rawItems)) {
+            $decoded = json_decode($rawItems, true);
+            if (is_array($decoded)) {
+                $rawItems = $decoded;
+            }
+        }
+        if (!empty($rawItems) && is_array($rawItems)) {
+            foreach ($rawItems as $item) {
+                if (is_string($item)) {
+                    $item = json_decode($item, true);
+                }
+                $pId = $item['product_id'] ?? $item['id'] ?? null;
+                $qty = (int) ($item['quantity'] ?? 1);
+                if ($pId && $qty > 0) {
+                    $itemsData[] = (object) [
+                        'product_id' => (int) $pId,
+                        'quantity' => $qty,
+                    ];
+                }
+            }
+        }
 
-        if ($cartItems->isEmpty()) {
+        if (empty($itemsData)) {
+            $cartItems = Cart::where('user_id', Auth::id())->get();
+            foreach ($cartItems as $c) {
+                $itemsData[] = (object) [
+                    'product_id' => $c->product_id,
+                    'quantity' => (int) $c->quantity,
+                ];
+            }
+        }
+
+        if (empty($itemsData)) {
             return response()->json([
                 'success' => false,
                 'message' => 'سلة المشتريات فارغة',
             ], 400);
         }
+
+        $productStoreIds = Product::whereIn(
+            'id',
+            array_map(fn ($item) => $item->product_id, $itemsData)
+        )->pluck('store_id')->unique();
+
+        if ($productStoreIds->count() > 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'يجب أن تكون جميع أصناف الطلب من متجر واحد',
+            ], 422);
+        }
+
+        $storeId = $productStoreIds->first();
 
         DB::beginTransaction();
 
@@ -106,7 +157,7 @@ class OrderController extends Controller
             $totalAmount = 0;
             $orderItems = [];
 
-            foreach ($cartItems as $cartItem) {
+            foreach ($itemsData as $cartItem) {
                 $product = Product::find($cartItem->product_id);
 
                 if (!$product || $product->stock < $cartItem->quantity) {
@@ -156,6 +207,7 @@ class OrderController extends Controller
 
             $order = Order::create([
                 'user_id' => Auth::id(),
+                'store_id' => $storeId,
                 'assigned_captain_id' => null,
                 'coupon_id' => $coupon?->id,
                 'coupon_code' => $coupon?->code,
@@ -202,7 +254,11 @@ class OrderController extends Controller
             DB::commit();
 
             // إرسال إشعار فوري للعميل بتأكيد إنشاء واستلام طلبه
-            app(OrderNotificationService::class)->notifyCustomerOrderCreated($order);
+            try {
+                app(OrderNotificationService::class)->notifyCustomerOrderCreated($order);
+            } catch (\Throwable $notifEx) {
+                \Log::warning('Order notification failed: ' . $notifEx->getMessage());
+            }
 
             $order->load(['items.product', 'statusHistory']);
 

@@ -13,7 +13,10 @@ class Product extends Model
         'details',
         'image', 
         'category_id',
+        'store_id',
+        'store_menu_section_id',
         'stock',
+        'is_available',
         'low_stock_threshold',
         'old_price',
     ];
@@ -22,12 +25,27 @@ class Product extends Model
         'price' => 'float',
         'old_price' => 'float',
         'stock' => 'integer',
+        'is_available' => 'boolean',
         'low_stock_threshold' => 'integer',
+    ];
+
+    protected $appends = [
+        'image_url',
     ];
     
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function store()
+    {
+        return $this->belongsTo(Store::class);
+    }
+
+    public function menuSection()
+    {
+        return $this->belongsTo(StoreMenuSection::class, 'store_menu_section_id');
     }
     
     public function cartItems()
@@ -42,7 +60,13 @@ class Product extends Model
     
     public function getImageUrlAttribute()
     {
-        return $this->image ? asset('storage/' . $this->image) : null;
+        if (!$this->image) {
+            return null;
+        }
+        if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
+            return $this->image;
+        }
+        return asset('storage/' . $this->image);
     }
 
     public function getIsLowStockAttribute(): bool

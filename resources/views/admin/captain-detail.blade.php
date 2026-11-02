@@ -9,9 +9,15 @@
             <i class="fa-solid fa-arrow-right"></i>
             <span>العودة لقائمة الكباتن</span>
         </a>
-        <div style="font-weight: 700; font-size: 13px; color: var(--text-muted);">
-            <i class="fa-solid fa-phone" style="margin-left: 4px;"></i>
-            {{ $captain->phone ?: 'لا يوجد هاتف مسجل' }} | {{ $captain->email }}
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" onclick="openEditCaptainModal()">
+                <i class="fa-solid fa-user-pen"></i>
+                <span>تعديل بيانات الكابتن</span>
+            </button>
+            <div style="background: white; padding: 8px 18px; border-radius: 99px; border: 1px solid var(--border); font-weight: 700; font-size: 13px; color: var(--text-muted);">
+                <i class="fa-solid fa-phone" style="margin-left: 4px;"></i>
+                {{ $captain->phone ?: 'لا يوجد هاتف مسجل' }} &bull; {{ $captain->email }}
+            </div>
         </div>
     </div>
 
@@ -255,4 +261,80 @@
             </table>
         </div>
     </div>
+
+    <!-- Modal: تعديل بيانات الكابتن -->
+    <div id="editCaptainModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 20px; width: 100%; max-width: 550px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <div style="background: var(--primary); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-user-pen"></i>
+                    <span>تعديل بيانات الكابتن: {{ $captain->name }}</span>
+                </h3>
+                <button type="button" onclick="closeEditCaptainModal()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer;">&times;</button>
+            </div>
+            <form method="POST" action="{{ route('admin.captains.update', $captain) }}" enctype="multipart/form-data" style="padding: 24px;">
+                @csrf
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">اسم الكابتن <span style="color: var(--danger);">*</span></label>
+                        <input type="text" name="name" value="{{ old('name', $captain->name) }}" required style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">رقم الهاتف</label>
+                        <input type="text" name="phone" value="{{ old('phone', $captain->phone) }}" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">البريد الإلكتروني <span style="color: var(--danger);">*</span></label>
+                    <input type="email" name="email" value="{{ old('email', $captain->email) }}" required style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">تغيير كلمة المرور (اختياري)</label>
+                    <input type="password" name="password" placeholder="اتركها فارغة في حال عدم الرغبة في التغيير" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                    <small style="color: var(--text-muted); font-size: 11px;">الحد الأدنى 6 خانات في حال التغيير</small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">حالة الحساب <span style="color: var(--danger);">*</span></label>
+                        <select name="status" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); font-weight: 700;">
+                            <option value="active" {{ $captain->status === 'active' ? 'selected' : '' }}>نشط (مفعل)</option>
+                            <option value="inactive" {{ $captain->status === 'inactive' ? 'selected' : '' }}>معطل (محظور مؤقتاً)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">حالة التوفر والاتصال</label>
+                        <select name="is_available" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); font-weight: 700;">
+                            <option value="1" {{ $captain->is_available ? 'selected' : '' }}>متصل (جاهز لاستقبال الطلبات)</option>
+                            <option value="0" {{ !$captain->is_available ? 'selected' : '' }}>غير متصل (غير متاح)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">الصورة الشخصية (اختياري)</label>
+                    <input type="file" name="avatar" accept="image/*" style="width: 100%; font-size: 12px;">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeEditCaptainModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i>
+                        <span>حفظ التعديلات</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditCaptainModal() {
+            document.getElementById('editCaptainModal').style.display = 'flex';
+        }
+        function closeEditCaptainModal() {
+            document.getElementById('editCaptainModal').style.display = 'none';
+        }
+    </script>
 @endsection

@@ -22,9 +22,11 @@ Route::get('/admin', function () {
 });
 
 Route::get('/media/{path}', function (string $path) {
-    abort_unless(Storage::disk('public')->exists($path), 404);
+    if (Storage::disk('public')->exists($path)) {
+        return response()->file(Storage::disk('public')->path($path));
+    }
 
-    return response()->file(Storage::disk('public')->path($path));
+    abort(404);
 })->where('path', '.*')->name('media.file');
 
 Route::get('/login', function () {

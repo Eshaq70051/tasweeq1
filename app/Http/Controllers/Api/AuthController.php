@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\OtpVerification;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -316,4 +318,188 @@ class AuthController extends Controller
             'message' => 'Password reset successfully'
         ]);
     }
-} 
+
+    /**
+     * إرسال رمز التحقق OTP عبر واتساب لتسجيل الدخول أو إنشاء حساب
+     */
+    public function sendOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|string',
+            'type' => 'nullable|string|in:login,register',
+            'name' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'يرجى التأكد من صحة رقم الجوال',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $rawPhone = preg_replace('/[^0-9]/', '', $request->phone);
+        if (str_starts_with($rawPhone, '967') && strlen($rawPhone) === 12) {
+            $localPhone = substr($rawPhone, 3);
+        } else {
+            $localPhone = $rawPhone;
+        }
+
+        $type = $request->input('type', 'login');
+        $name = $request->input('name');
+
+        // في حال تسجيل الدخول، التحقق هل المستخدم موجود
+        $user = User::where('phone', $localPhone)
+            ->orWhere('phone', '967' . $localPhone)
+            ->orWhere('phone', $rawPhone)
+            ->first();
+
+        if ($type === 'login' && !$user) {
+            // تحويل تلقائي للتسجيل السلس لتسهيل الدخول المباشر
+            $type = 'register';
+        }
+
+        if ($type === 'register' && $user) {
+            $type = 'login';
+        }
+
+        // إنشاء كود مكون من 4 أرقام
+        $code = str_pad((string)mt_rand(1000, 9999), 4, '0', STR_PAD_LEFT);
+
+        // حذف أي رموز سابقة لنفس الرقم
+        OtpVerification::where('phone', $localPhone)->orWhere('phone', $rawPhone)->delete();
+
+        // حفظ رمز التحقق صالح لمدة 5 دقائق
+        OtpVerification::create([
+            'phone' => $localPhone,
+            'code' => $code,
+            'type' => $type,
+            'name' => $name,
+            'expires_at' => now()->addMinutes(5),
+        ]);
+
+        // إرسال الكود عبر خدمة الواتساب
+        WhatsAppService::sendOtp($localPhone, $code);
+
+        $responseData = [
+            'phone' => $localPhone,
+            'type' => $type,
+            'expires_in' => 300,
+        ];
+
+        if (config('app.debug')) {
+            $responseData['debug_code'] = $code;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إرسال رمز التحقق إلى حسابك في واتساب بنجاح',
+            'data' => $responseData
+        ]);
+    }
+
+    /**
+     * التحقق من كود الواتساب وإتمام تسجيل الدخول أو إنشاء الحساب
+     */
+    public function verifyOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|string',
+            'code' => 'required|string',
+            'name' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'يرجى إدخال رقم الجوال ورمز التحقق',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $rawPhone = preg_replace('/[^0-9]/', '', $request->phone);
+        if (str_starts_with($rawPhone, '967') && strlen($rawPhone) === 12) {
+            $localPhone = substr($rawPhone, 3);
+        } else {
+            $localPhone = $rawPhone;
+        }
+
+        $inputCode = trim((string)$request->code);
+
+        // البحث عن الرمز الفعّال
+        $otp = OtpVerification::where(function ($q) use ($localPhone, $rawPhone) {
+                $q->where('phone', $localPhone)->orWhere('phone', $rawPhone);
+            })
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if (!$otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'انتهت صلاحية رمز التحقق أو لم يتم طلبه، يرجى طلب رمز جديد',
+            ], 422);
+        }
+
+        if ($otp->code !== $inputCode) {
+            return response()->json([
+                'success' => false,
+                'message' => 'رمز التحقق غير صحيح، يرجى المحاولة مرة أخرى',
+            ], 422);
+        }
+
+        // الكود صحيح - البحث عن المستخدم أو إنشاء حساب جديد
+        $user = User::where('phone', $localPhone)
+            ->orWhere('phone', '967' . $localPhone)
+            ->orWhere('phone', $rawPhone)
+            ->first();
+
+        if (!$user) {
+            $userName = trim($request->name ?? $otp->name ?? '');
+            if (empty($userName)) {
+                $userName = 'عميل ' . substr($localPhone, -4);
+            }
+
+            $user = User::create([
+                'name' => $userName,
+                'phone' => $localPhone,
+                'email' => $localPhone . '@talabak.local',
+                'password' => \Illuminate\Support\Facades\Hash::make(\Illuminate\Support\Str::random(16)),
+                'role' => 'user',
+                'is_admin' => false,
+                'status' => 'active',
+                'phone_verified_at' => now(),
+            ]);
+        } else {
+            $user->phone_verified_at = now();
+            if (!empty($request->name) && (empty($user->name) || str_starts_with($user->name, 'عميل '))) {
+                $user->name = $request->name;
+            }
+            $user->save();
+        }
+
+        // حذف الرمز بعد استخدامه
+        $otp->delete();
+
+        // توليد توكن المصادقة
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تسجيل الدخول بنجاح',
+            'data' => [
+                'user' => $user,
+                'access_token' => $token,
+                'token_type' => 'Bearer'
+            ]
+        ]);
+    }
+
+    /**
+     * إعادة إرسال رمز التحقق عبر واتساب
+     */
+    public function resendOtp(Request $request)
+    {
+        return $this->sendOtp($request);
+    }
+}

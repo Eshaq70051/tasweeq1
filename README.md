@@ -57,3 +57,7 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Importing Eshaq media
+
+The import and download scripts use `ESHAQ_BASE_URL` as their configurable source base. Set it in the environment before running those scripts. The gifts importer writes image references as relative paths, and downloaded files are placed under `storage/app/public`.

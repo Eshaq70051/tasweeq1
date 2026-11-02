@@ -30,12 +30,12 @@
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--bg); font-family: 'Cairo', sans-serif; color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
-        /* Sidebar Responsive Logic */
+        /* Sidebar Responsive Logic & Modern Styling */
         .sidebar {
             width: var(--sidebar-width);
             background: var(--sidebar-bg);
             border-left: 1px solid var(--border);
-            padding: 30px 20px;
+            padding: 24px 14px;
             position: fixed;
             height: 100vh;
             right: 0; top: 0;
@@ -43,6 +43,21 @@
             transition: transform 0.3s ease;
             overflow-y: auto;
             overscroll-behavior: contain;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(6, 132, 148, 0.25) transparent;
+        }
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(6, 132, 148, 0.2);
+            border-radius: 10px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
         }
 
         .main-content {
@@ -68,26 +83,49 @@
 
         .menu-btn { display: none; background: var(--primary-soft); border: none; padding: 10px 14px; border-radius: 10px; cursor: pointer; color: var(--primary); font-size: 18px; }
 
-        /* Nav Links */
-        .nav { display: flex; flex-direction: column; gap: 6px; padding-bottom: 28px; }
+        /* Nav Links & Groupings */
+        .nav { display: flex; flex-direction: column; gap: 4px; padding-bottom: 30px; }
+
+        .nav-section-title {
+            font-size: 11px;
+            font-weight: 800;
+            color: #94A3B8;
+            margin: 14px 6px 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.3px;
+        }
+        .nav-section-title span {
+            white-space: nowrap;
+        }
+        .nav-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+            opacity: 0.8;
+        }
+
         .nav a { 
             display: flex; 
             align-items: center; 
             gap: 12px; 
-            padding: 12px 16px; 
-            border-radius: 12px; 
+            padding: 9.5px 14px; 
+            border-radius: 10px; 
             color: var(--text-muted); 
             text-decoration: none; 
             font-weight: 600; 
-            font-size: 14px;
-            transition: all 0.25s ease; 
+            font-size: 13.5px;
+            transition: all 0.2s ease; 
         }
         .nav a i {
-            width: 22px;
+            width: 20px;
             text-align: center;
-            font-size: 16px;
+            font-size: 15px;
             color: #8C949A;
-            transition: color 0.25s ease;
+            transition: color 0.2s ease;
+            flex-shrink: 0;
         }
         .nav a:hover { 
             background: var(--primary-soft); 
@@ -100,10 +138,98 @@
             background: var(--primary-soft); 
             color: var(--primary); 
             font-weight: 700;
-            box-shadow: inset 4px 0 0 var(--primary); 
+            border-right: 4px solid var(--primary);
+            border-radius: 4px 10px 10px 4px;
         }
         .nav a.active i {
             color: var(--primary);
+        }
+
+        /* Collapsible Dropdown */
+        .nav-dropdown {
+            display: flex;
+            flex-direction: column;
+        }
+        .nav-dropdown-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 9.5px 14px;
+            border-radius: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: right;
+        }
+        .nav-dropdown-btn:hover {
+            background: var(--primary-soft);
+            color: var(--primary);
+        }
+        .nav-dropdown-btn:hover i {
+            color: var(--primary);
+        }
+        .nav-dropdown-btn.active-group {
+            color: var(--primary);
+            background: var(--primary-soft);
+            font-weight: 700;
+        }
+        .nav-dropdown-btn.active-group i {
+            color: var(--primary);
+        }
+        .nav-dropdown-btn .btn-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .nav-dropdown-btn .btn-content i {
+            width: 20px;
+            text-align: center;
+            font-size: 15px;
+            color: #8C949A;
+            transition: color 0.2s ease;
+            flex-shrink: 0;
+        }
+        .nav-dropdown-btn .chevron {
+            font-size: 11px;
+            color: #8C949A;
+            transition: transform 0.25s ease;
+        }
+        .nav-dropdown.open .chevron {
+            transform: rotate(180deg);
+        }
+        .nav-dropdown-menu {
+            display: none;
+            flex-direction: column;
+            gap: 2px;
+            margin-right: 20px;
+            padding-right: 8px;
+            border-right: 2px solid #E2E8F0;
+            margin-top: 3px;
+            margin-bottom: 5px;
+        }
+        .nav-dropdown.open .nav-dropdown-menu {
+            display: flex;
+        }
+        .nav-dropdown-menu a {
+            padding: 7px 10px;
+            font-size: 12.5px;
+            font-weight: 500;
+            border-radius: 6px;
+        }
+        .nav-dropdown-menu a i {
+            font-size: 13px;
+            width: 16px;
+        }
+        .nav-dropdown-menu a.active {
+            font-weight: 700;
+            border-right: 3px solid var(--primary);
+            border-radius: 3px 6px 6px 3px;
         }
 
         /* Helpers */
@@ -292,15 +418,28 @@
             color: var(--text-muted);
             font-weight: 600;
         }
-        .pagination-container nav svg {
-            width: 16px;
-            height: 16px;
-            display: inline-block;
-            vertical-align: middle;
+
+        /* SVG Sizing Safety */
+        svg, nav svg, .pagination svg, [role="navigation"] svg {
+            width: 16px !important;
+            height: 16px !important;
+            max-width: 16px !important;
+            max-height: 16px !important;
+            display: inline-block !important;
+            vertical-align: middle !important;
         }
-        .pagination-container nav div:first-child {
-            display: none;
+
+        /* Bootstrap & Standard Pagination Styles */
+        .pagination {
+            display: inline-flex;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            gap: 5px;
+            align-items: center;
+            flex-wrap: wrap;
         }
+        .page-item .page-link,
         .pagination-container nav span, 
         .pagination-container nav a {
             display: inline-flex;
@@ -308,9 +447,8 @@
             justify-content: center;
             min-width: 34px;
             height: 34px;
-            padding: 0 10px;
-            margin: 0 2px;
-            border-radius: 8px;
+            padding: 0 12px;
+            border-radius: 10px;
             font-size: 13px;
             font-weight: 700;
             text-decoration: none;
@@ -319,25 +457,34 @@
             background: white;
             transition: all 0.2s;
         }
+        .page-item.active .page-link,
         .pagination-container nav span[aria-current="page"] span,
         .pagination-container nav a.active {
             background: var(--primary) !important;
             color: white !important;
             border-color: var(--primary) !important;
         }
+        .page-item .page-link:hover,
         .pagination-container nav a:hover {
             background: var(--primary-soft);
             color: var(--primary);
             border-color: var(--primary);
+        }
+        .page-item.disabled .page-link {
+            color: #A0AEC0;
+            background: #F8FAFC;
+            border-color: var(--border);
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
     <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
     
-    <aside class="sidebar" id="sidebar">
-        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding-bottom: 18px; border-bottom: 1px solid var(--border);">
-            <div style="width: 42px; height: 42px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(6, 132, 148, 0.25);">
+        <aside class="sidebar" id="sidebar">
+        <!-- Logo & Header -->
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+            <div style="width: 42px; height: 42px; background: linear-gradient(135deg, var(--primary), var(--secondary)); border-radius: 12px; color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; box-shadow: 0 4px 10px rgba(6, 132, 148, 0.25); flex-shrink: 0;">
                 <i class="fa-solid fa-store"></i>
             </div>
             <div>
@@ -347,18 +494,31 @@
         </div>
 
         <nav class="nav">
+            <!-- 1. الرئيسية -->
             <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                 <i class="fa-solid fa-chart-pie"></i>
                 <span>الرئيسية</span>
             </a>
+
+            <!-- 2. إدارة المتجر والمنتجات -->
+            <div class="nav-section-title">
+                <i class="fa-solid fa-layer-group" style="font-size: 11px;"></i>
+                <span>إدارة المتجر</span>
+            </div>
             <a href="{{ route('admin.categories') }}" class="{{ request()->routeIs('admin.categories*') ? 'active' : '' }}">
                 <i class="fa-solid fa-shapes"></i>
                 <span>التصنيفات</span>
             </a>
-            <a href="{{ route('admin.products') }}" class="{{ request()->routeIs('admin.products*') ? 'active' : '' }}">
-                <i class="fa-solid fa-boxes-stacked"></i>
-                <span>المنتجات</span>
+            <a href="{{ route('admin.stores') }}" class="{{ request()->routeIs('admin.stores*') ? 'active' : '' }}">
+                <i class="fa-solid fa-store"></i>
+                <span>المتاجر والمطاعم</span>
             </a>
+
+            <!-- 3. الطلبات والمبيعات -->
+            <div class="nav-section-title">
+                <i class="fa-solid fa-cart-shopping" style="font-size: 11px;"></i>
+                <span>الطلبات والمبيعات</span>
+            </div>
             <a href="{{ route('admin.orders') }}" class="{{ request()->routeIs('admin.orders*') ? 'active' : '' }}">
                 <i class="fa-solid fa-bag-shopping"></i>
                 <span>الطلبات</span>
@@ -375,30 +535,106 @@
                 <i class="fa-solid fa-heart"></i>
                 <span>المفضلة</span>
             </a>
+
+            <!-- 4. المستخدمين والكباتن -->
+            <div class="nav-section-title">
+                <i class="fa-solid fa-users" style="font-size: 11px;"></i>
+                <span>المستخدمين والتوصيل</span>
+            </div>
             <a href="{{ route('admin.users') }}" class="{{ request()->routeIs('admin.users*') ? 'active' : '' }}">
                 <i class="fa-solid fa-users"></i>
                 <span>المستخدمين</span>
             </a>
-            <a href="{{ route('admin.captains') }}" class="{{ request()->routeIs('admin.captains*') ? 'active' : '' }}">
+            <a href="{{ route('admin.captains') }}" class="{{ request()->routeIs('admin.captains*') && !request()->routeIs('admin.finance*') ? 'active' : '' }}">
                 <i class="fa-solid fa-motorcycle"></i>
                 <span>الكباتن</span>
             </a>
-            <a href="{{ route('admin.sliders') }}" class="{{ request()->routeIs('admin.sliders*') ? 'active' : '' }}">
-                <i class="fa-solid fa-images"></i>
-                <span>العروض الترويجية</span>
-            </a>
-            <a href="{{ route('admin.settings') }}" class="{{ request()->routeIs('admin.settings*') ? 'active' : '' }}">
-                <i class="fa-solid fa-gear"></i>
-                <span>إعدادات النظام</span>
-            </a>
-            <a href="{{ route('admin.payment-methods') }}" class="{{ request()->routeIs('admin.payment-methods*') ? 'active' : '' }}">
-                <i class="fa-solid fa-credit-card"></i>
-                <span>وسائل الدفع</span>
-            </a>
-            <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="color: var(--danger); margin-top: 15px;">
-                <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--danger);"></i>
-                <span>تسجيل الخروج</span>
-            </a>
+
+            <!-- 5. النظام المالي (قائمة منسدلة) -->
+            <div class="nav-section-title">
+                <i class="fa-solid fa-coins" style="font-size: 11px;"></i>
+                <span>المالية والمحاسبة</span>
+            </div>
+            <div class="nav-dropdown {{ request()->routeIs('admin.finance*') ? 'open' : '' }}" id="finance-dropdown">
+                <button type="button" class="nav-dropdown-btn {{ request()->routeIs('admin.finance*') ? 'active-group' : '' }}" onclick="toggleNavDropdown('finance-dropdown')">
+                    <div class="btn-content">
+                        <i class="fa-solid fa-wallet"></i>
+                        <span>النظام المالي</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down chevron"></i>
+                </button>
+                <div class="nav-dropdown-menu">
+                    <a href="{{ route('admin.finance.overview') }}" class="{{ request()->routeIs('admin.finance.overview') ? 'active' : '' }}">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>الرئيسية المالية</span>
+                    </a>
+                    <a href="{{ route('admin.finance.stores') }}" class="{{ request()->routeIs('admin.finance.stores*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-utensils"></i>
+                        <span>حسابات المطاعم والمتاجر</span>
+                    </a>
+                    <a href="{{ route('admin.finance.invoices') }}" class="{{ request()->routeIs('admin.finance.invoices*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-file-invoice"></i>
+                        <span>فواتير المتاجر</span>
+                    </a>
+                    <a href="{{ route('admin.finance.captains') }}" class="{{ request()->routeIs('admin.finance.captains*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-hand-holding-dollar"></i>
+                        <span>حسابات الكباتن والذمم</span>
+                    </a>
+                    <a href="{{ route('admin.finance.employees') }}" class="{{ request()->routeIs('admin.finance.employees*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-user-tie"></i>
+                        <span>الموظفون والرواتب</span>
+                    </a>
+                    <a href="{{ route('admin.finance.payroll') }}" class="{{ request()->routeIs('admin.finance.payroll*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-money-check-dollar"></i>
+                        <span>مسير الرواتب</span>
+                    </a>
+                    <a href="{{ route('admin.finance.transactions') }}" class="{{ request()->routeIs('admin.finance.transactions*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-receipt"></i>
+                        <span>العمليات والسندات</span>
+                    </a>
+                    <a href="{{ route('admin.finance.reports') }}" class="{{ request()->routeIs('admin.finance.reports*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-file-lines"></i>
+                        <span>التقارير المالية</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 6. الإعدادات والمنصة (قائمة منسدلة) -->
+            <div class="nav-section-title">
+                <i class="fa-solid fa-gear" style="font-size: 11px;"></i>
+                <span>الإعدادات</span>
+            </div>
+            <div class="nav-dropdown {{ request()->routeIs('admin.sliders*', 'admin.settings*', 'admin.payment-methods*') ? 'open' : '' }}" id="settings-dropdown">
+                <button type="button" class="nav-dropdown-btn {{ request()->routeIs('admin.sliders*', 'admin.settings*', 'admin.payment-methods*') ? 'active-group' : '' }}" onclick="toggleNavDropdown('settings-dropdown')">
+                    <div class="btn-content">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>إعدادات المنصة</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down chevron"></i>
+                </button>
+                <div class="nav-dropdown-menu">
+                    <a href="{{ route('admin.sliders') }}" class="{{ request()->routeIs('admin.sliders*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-images"></i>
+                        <span>العروض الترويجية</span>
+                    </a>
+                    <a href="{{ route('admin.payment-methods') }}" class="{{ request()->routeIs('admin.payment-methods*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-credit-card"></i>
+                        <span>وسائل الدفع</span>
+                    </a>
+                    <a href="{{ route('admin.settings') }}" class="{{ request()->routeIs('admin.settings*') ? 'active' : '' }}">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>إعدادات النظام</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 7. تسجيل الخروج -->
+            <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border);">
+                <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" style="color: var(--danger); background: rgba(255, 77, 77, 0.06); border: 1px solid rgba(255, 77, 77, 0.15); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; font-size: 13px; transition: all 0.2s ease;">
+                    <i class="fa-solid fa-arrow-right-from-bracket" style="color: var(--danger); width: 20px; text-align: center;"></i>
+                    <span>تسجيل الخروج</span>
+                </a>
+            </div>
         </nav>
     </aside>
 
@@ -455,6 +691,13 @@
         function toggleMenu() {
             document.getElementById('sidebar').classList.toggle('show');
             document.getElementById('overlay').classList.toggle('show');
+        }
+
+        function toggleNavDropdown(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.toggle('open');
+            }
         }
     </script>
 </body>

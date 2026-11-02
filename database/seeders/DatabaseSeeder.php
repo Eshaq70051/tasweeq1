@@ -15,5 +15,14 @@ class DatabaseSeeder extends Seeder
         $this->call(ProductSeeder::class);
         $this->call(PaymentMethodSeeder::class);
         $this->call(AdminDashboardSeeder::class);
+        $this->call(EshaqFullImportSeeder::class);
+        $this->call(EshaqMeatsFishSeeder::class);
+        $this->call(EshaqBakeriesSeeder::class);
+        $this->call(EshaqGiftsStationerySeeder::class);
+        $this->call(EshaqCosmeticsSeeder::class);
+        $this->call(EshaqModemsSeeder::class);
+        $this->call(EshaqOnlineStoresSeeder::class);
+        $this->call(EshaqPharmaSeeder::class);
+        $this->call(EshaqPhonesElectronicsSeeder::class);
     }
 }

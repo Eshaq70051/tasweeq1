@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Api\StoreController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -21,6 +22,11 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Public routes
+// Phone & WhatsApp OTP Auth
+Route::post('/auth/phone/send-otp', [AuthController::class, 'sendOtp']);
+Route::post('/auth/phone/verify-otp', [AuthController::class, 'verifyOtp']);
+Route::post('/auth/phone/resend-otp', [AuthController::class, 'resendOtp']);
+
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/auth/google', [AuthController::class, 'googleLogin']);
@@ -29,6 +35,13 @@ Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{id}', [ProductController::class, 'show']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{id}/products', [CategoryController::class, 'products']);
+Route::get('/categories/{id}/stores', [StoreController::class, 'index']);
+Route::get('/stores', [StoreController::class, 'index']);
+Route::get('/stores/popular', [StoreController::class, 'popular']);
+Route::get('/stores/{id}', [StoreController::class, 'show']);
+Route::post('/stores', [StoreController::class, 'store']);
+Route::post('/stores/{id}/sections', [StoreController::class, 'addSection']);
+Route::post('/stores/{id}/products', [StoreController::class, 'addProduct']);
 Route::get('/sliders', [ProductController::class, 'getSliders']);
 Route::get('/settings', [SettingsController::class, 'index']);
 Route::get('/payment-methods', [PaymentMethodController::class, 'index']);
@@ -67,10 +80,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/captain/dashboard', [CaptainController::class, 'dashboard']);
         Route::get('/captain/wallet', [CaptainController::class, 'wallet']);
         Route::get('/captain/report', [CaptainController::class, 'report']);
+        Route::get('/captain/ratings', [CaptainController::class, 'ratings']);
         Route::post('/captain/payments', [CaptainController::class, 'requestPayment']);
         Route::post('/captain/toggle-status', [CaptainController::class, 'toggleStatus']);
+        Route::post('/captain/location', [CaptainController::class, 'updateLocation']);
         Route::post('/captain/orders/{id}/arrive-store', [CaptainController::class, 'arriveAtStore']);
         Route::post('/captain/orders/{id}/accept', [CaptainController::class, 'acceptOrder']);
+        Route::post('/captain/orders/{id}/reject', [CaptainController::class, 'rejectOrder']);
         Route::post('/captain/orders/{id}/deliver', [CaptainController::class, 'deliverOrder']);
     });
 });

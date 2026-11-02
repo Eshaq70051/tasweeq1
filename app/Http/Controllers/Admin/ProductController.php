@@ -40,6 +40,9 @@ class ProductController extends Controller
         $product->category_id = $validated['category_id'];
         $product->stock = $validated['stock'];
         $product->low_stock_threshold = $validated['low_stock_threshold'] ?? 5;
+        $product->store_id = $request->input('store_id') ?: null;
+        $product->store_menu_section_id = $request->input('store_menu_section_id') ?: null;
+        $product->is_available = $request->has('is_available') ? true : true;
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('products', 'public');
@@ -66,6 +69,9 @@ class ProductController extends Controller
         $product->category_id = $validated['category_id'];
         $product->stock = $validated['stock'];
         $product->low_stock_threshold = $validated['low_stock_threshold'] ?? 5;
+        $product->store_id = $request->input('store_id') ?: null;
+        $product->store_menu_section_id = $request->input('store_menu_section_id') ?: null;
+        $product->is_available = $request->has('is_available') ? true : true;
 
         if ($request->hasFile('image')) {
             $path = $request->file('image')->store('products', 'public');
@@ -119,6 +125,9 @@ class ProductController extends Controller
             'category_id' => $validated['category_id'] ?? $product->category_id,
             'stock' => $validated['stock'] ?? $product->stock,
             'low_stock_threshold' => $validated['low_stock_threshold'] ?? $product->low_stock_threshold,
+            'store_id' => $request->has('store_id') ? ($request->input('store_id') ?: null) : $product->store_id,
+            'store_menu_section_id' => $request->has('store_menu_section_id') ? ($request->input('store_menu_section_id') ?: null) : $product->store_menu_section_id,
+            'is_available' => $request->has('is_available') ? true : false,
         ]);
 
         if ($request->hasFile('image')) {

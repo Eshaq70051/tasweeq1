@@ -174,12 +174,15 @@
                             </td>
                             <td style="text-align: center;">
                                 <div style="display: inline-flex; gap: 6px;">
+                                    <button type="button" class="btn btn-outline" style="padding: 6px 10px; font-size: 11px;" onclick="openEditCaptainModal('{{ $captain->id }}', '{{ addslashes($captain->name) }}', '{{ addslashes($captain->phone ?? '') }}', '{{ addslashes($captain->email) }}', '{{ $captain->status }}', '{{ $captain->is_available ? 1 : 0 }}')" title="تعديل بيانات الكابتن">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                        <span>تعديل</span>
+                                    </button>
                                     <form action="{{ route('admin.users.updateRole', $captain) }}" method="POST" onsubmit="return confirm('هل تريد إزالة صفة الكابتن وتحويله إلى مستخدم عادي؟')">
                                         @csrf
                                         <input type="hidden" name="role" value="user">
                                         <button type="submit" class="btn btn-outline" style="padding: 6px 10px; font-size: 11px;" title="إلغاء صفة كابتن">
                                             <i class="fa-solid fa-user-minus"></i>
-                                            <span>إلغاء صفة</span>
                                         </button>
                                     </form>
                                     <form action="{{ route('admin.users.delete', $captain) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف هذا الكابتن نهائياً؟')">
@@ -213,4 +216,88 @@
             {{ $captains->links() }}
         </div>
     </div>
+
+    <!-- Modal: تعديل بيانات الكابتن -->
+    <div id="editCaptainModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: white; border-radius: 20px; width: 100%; max-width: 550px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <div style="background: var(--primary); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-user-pen"></i>
+                    <span>تعديل بيانات الكابتن: <span id="modal_captain_title"></span></span>
+                </h3>
+                <button type="button" onclick="closeEditCaptainModal()" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer;">&times;</button>
+            </div>
+            <form id="editCaptainForm" method="POST" action="" enctype="multipart/form-data" style="padding: 24px;">
+                @csrf
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">اسم الكابتن <span style="color: var(--danger);">*</span></label>
+                        <input type="text" name="name" id="edit_cap_name" required style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">رقم الهاتف</label>
+                        <input type="text" name="phone" id="edit_cap_phone" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">البريد الإلكتروني <span style="color: var(--danger);">*</span></label>
+                    <input type="email" name="email" id="edit_cap_email" required style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">كلمة المرور الجديدة (اختياري)</label>
+                    <input type="password" name="password" placeholder="اتركها فارغة إن لم ترغب في تغييرها" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);">
+                    <small style="color: var(--text-muted); font-size: 11px;">الحد الأدنى 6 خانات في حال التغيير</small>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">حالة الحساب <span style="color: var(--danger);">*</span></label>
+                        <select name="status" id="edit_cap_status" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); font-weight: 700;">
+                            <option value="active">نشط (مفعل)</option>
+                            <option value="inactive">معطل (محظور مؤقتاً)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">حالة التوفر والاتصال</label>
+                        <select name="is_available" id="edit_cap_available" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); font-weight: 700;">
+                            <option value="1">متصل (جاهز لاستقبال الطلبات)</option>
+                            <option value="0">غير متصل (غير متاح)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 700; margin-bottom: 6px; font-size: 13px;">تحديث الصورة الشخصية (اختياري)</label>
+                    <input type="file" name="avatar" accept="image/*" style="width: 100%; font-size: 12px;">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeEditCaptainModal()">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-check"></i>
+                        <span>حفظ التعديلات</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditCaptainModal(id, name, phone, email, status, isAvailable) {
+            document.getElementById('editCaptainForm').action = "/admin/captains/" + id + "/update";
+            document.getElementById('modal_captain_title').textContent = name;
+            document.getElementById('edit_cap_name').value = name;
+            document.getElementById('edit_cap_phone').value = phone;
+            document.getElementById('edit_cap_email').value = email;
+            document.getElementById('edit_cap_status').value = status;
+            document.getElementById('edit_cap_available').value = isAvailable;
+            document.getElementById('editCaptainModal').style.display = 'flex';
+        }
+
+        function closeEditCaptainModal() {
+            document.getElementById('editCaptainModal').style.display = 'none';
+        }
+    </script>
 @endsection

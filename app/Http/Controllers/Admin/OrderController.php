@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateOrderStatusRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
+use App\Models\PaymentMethod;
 use App\Services\OrderNotificationService;
 use Illuminate\Http\Request;
 
@@ -62,7 +63,10 @@ class OrderController extends Controller
 
     public function markPaidFromWeb(Order $order)
     {
-        if ($order->payment_method !== 'cash' && !$order->receipt_image) {
+        $requiresReceipt = PaymentMethod::where('code', $order->payment_method)
+            ->value('requires_receipt');
+
+        if ($requiresReceipt && !$order->receipt_image) {
             return redirect()->back()->with('error', 'لا يمكن اعتماد الدفع قبل إرفاق صورة الإيصال');
         }
 

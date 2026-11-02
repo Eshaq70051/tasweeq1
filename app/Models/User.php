@@ -24,6 +24,8 @@ class User extends Authenticatable
         'is_available',
         'phone',
         'avatar',
+        'latitude',
+        'longitude',
         'fcm_token',
     ];
 
@@ -83,6 +85,13 @@ class User extends Authenticatable
     public function captainLedgerEntries()
     {
         return $this->hasMany(CaptainLedgerEntry::class, 'captain_id')->latest();
+    }
+
+    public function captainTransactions()
+    {
+        return $this->hasMany(FinancialTransaction::class, 'party_id')
+            ->where('party_type', 'captain')
+            ->orderBy('transaction_date', 'desc');
     }
 
     /**

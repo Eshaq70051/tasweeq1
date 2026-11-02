@@ -31,6 +31,7 @@ class ProductResource extends JsonResource
             'in_stock' => ((int) ($this->stock ?? 0)) > 0,
             'is_low_stock' => (bool) $this->is_low_stock,
             'category_id' => $this->category_id,
+            'store_id' => $this->store_id,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

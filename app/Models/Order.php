@@ -8,6 +8,7 @@ class Order extends Model
 {
     protected $fillable = [
         'user_id', 
+        'store_id',
         'assigned_captain_id',
         'coupon_id',
         'coupon_code',
@@ -20,6 +21,8 @@ class Order extends Model
         'subtotal_amount',
         'discount_amount',
         'total_amount', 
+        'store_amount',
+        'app_commission',
         'captain_commission',
         'payment_method', 
         'transfer_number',
@@ -36,8 +39,33 @@ class Order extends Model
         'subtotal_amount' => 'float',
         'discount_amount' => 'float',
         'total_amount' => 'float',
+        'store_amount' => 'float',
+        'app_commission' => 'float',
         'captain_commission' => 'float',
     ];
+
+    protected $appends = ['store'];
+
+    public function store()
+    {
+        return $this->belongsTo(Store::class);
+    }
+
+    public function getStoreAttribute()
+    {
+        if ($this->relationLoaded('store') && $this->getRelation('store')) {
+            return $this->getRelation('store');
+        }
+        if ($this->store_id) {
+            $store = Store::find($this->store_id);
+            if ($store) return $store;
+        }
+        $firstItem = $this->items()->with('product.store')->first();
+        if ($firstItem && $firstItem->product && $firstItem->product->store) {
+            return $firstItem->product->store;
+        }
+        return \App\Models\Store::first();
+    }
     
     public function user()
     {

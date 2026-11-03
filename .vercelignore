@@ -1,0 +1,8 @@
+.git
+.github
+tests
+docker
+*.py
+*.yaml
+*.sql
+download_errors.json

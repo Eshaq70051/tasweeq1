@@ -6,26 +6,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 
-Route::get('/db-test', function (Request $request) {
-    try {
-        \Illuminate\Support\Facades\DB::connection()->getPdo();
-        return response()->json([
-            'status' => 'connected',
-            'database' => \Illuminate\Support\Facades\DB::connection()->getDatabaseName(),
-            'users_count' => \App\Models\User::count(),
-            'products_count' => \App\Models\Product::count(),
-            'request_uri' => $_SERVER['REQUEST_URI'] ?? null,
-            'path' => $request->path(),
-            'url' => $request->url(),
-        ]);
-    } catch (\Throwable $e) {
-        return response()->json([
-            'status' => 'error',
-            'message' => $e->getMessage(),
-        ], 500);
-    }
-});
-
 Route::get('/', function () {
     if (Auth::check() && Auth::user()->isAdmin()) {
         return redirect()->route('admin.dashboard');

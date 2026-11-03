@@ -7,8 +7,8 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -45,8 +45,7 @@ class ProductController extends Controller
         $product->is_available = $request->has('is_available') ? true : true;
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'public');
-            $product->image = $path;
+            $product->image = (new CloudinaryService())->upload($request->file('image'), 'products');
         }
 
         $product->save();
@@ -74,8 +73,7 @@ class ProductController extends Controller
         $product->is_available = $request->has('is_available') ? true : true;
 
         if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('products', 'public');
-            $product->image = $path;
+            $product->image = (new CloudinaryService())->upload($request->file('image'), 'products');
         }
 
         $product->save();
@@ -98,11 +96,9 @@ class ProductController extends Controller
         $product->fill($validated);
 
         if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $path = $request->file('image')->store('products', 'public');
-            $product->image = $path;
+            $cloudinary = new CloudinaryService();
+            $product->image = $cloudinary->upload($request->file('image'), 'products');
+            $cloudinary->delete($product->getOriginal('image'));
         }
 
         $product->save();
@@ -131,10 +127,9 @@ class ProductController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $product->image = $request->file('image')->store('products', 'public');
+            $cloudinary = new CloudinaryService();
+            $product->image = $cloudinary->upload($request->file('image'), 'products');
+            $cloudinary->delete($product->getOriginal('image'));
         }
 
         $product->save();
@@ -155,7 +150,7 @@ class ProductController extends Controller
         }
 
         if ($product->image) {
-            Storage::disk('public')->delete($product->image);
+            (new CloudinaryService())->delete($product->image);
         }
 
         $product->delete();
@@ -169,7 +164,7 @@ class ProductController extends Controller
     public function deleteFromWeb(Request $request, Product $product)
     {
         if ($product->image) {
-            Storage::disk('public')->delete($product->image);
+            (new CloudinaryService())->delete($product->image);
         }
 
         $product->delete();

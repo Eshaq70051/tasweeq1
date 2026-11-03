@@ -8,8 +8,8 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\MarketingSlider;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -110,10 +110,7 @@ class ProductController extends Controller
         $product->stock = $validated['stock'];
 
         if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $path = $image->storeAs('products', $imageName, 'public');
-            $product->image = $path;
+            $product->image = (new CloudinaryService())->upload($request->file('image'), 'products');
         }
 
         $product->save();
@@ -140,13 +137,9 @@ class ProductController extends Controller
         $product->fill($validated);
 
         if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $image = $request->file('image');
-            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $path = $image->storeAs('products', $imageName, 'public');
-            $product->image = $path;
+            $cloudinary = new CloudinaryService();
+            $product->image = $cloudinary->upload($request->file('image'), 'products');
+            $cloudinary->delete($product->getOriginal('image'));
         }
 
         $product->save();
@@ -170,7 +163,7 @@ class ProductController extends Controller
         }
 
         if ($product->image) {
-            Storage::disk('public')->delete($product->image);
+            (new CloudinaryService())->delete($product->image);
         }
 
         $product->delete();

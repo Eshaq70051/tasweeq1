@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentMethod;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class PaymentMethodController extends Controller
 {
@@ -19,7 +19,7 @@ class PaymentMethodController extends Controller
     {
         $data = $this->validated($request);
         if ($request->hasFile('icon')) {
-            $data['icon'] = $request->file('icon')->store('payment-methods', 'public');
+            $data['icon'] = (new CloudinaryService())->upload($request->file('icon'), 'payment-methods');
         }
         PaymentMethod::create($data);
         return redirect()->route('admin.payment-methods')->with('success', 'تمت إضافة وسيلة الدفع');
@@ -29,8 +29,9 @@ class PaymentMethodController extends Controller
     {
         $data = $this->validated($request, $paymentMethod->id);
         if ($request->hasFile('icon')) {
-            if ($paymentMethod->icon) Storage::disk('public')->delete($paymentMethod->icon);
-            $data['icon'] = $request->file('icon')->store('payment-methods', 'public');
+            $cloudinary = new CloudinaryService();
+            $data['icon'] = $cloudinary->upload($request->file('icon'), 'payment-methods');
+            $cloudinary->delete($paymentMethod->icon);
         }
         $paymentMethod->update($data);
         return redirect()->route('admin.payment-methods')->with('success', 'تم تحديث وسيلة الدفع');
@@ -47,7 +48,7 @@ class PaymentMethodController extends Controller
         if ($paymentMethod->code === 'cash') {
             return back()->with('error', 'لا يمكن حذف الدفع عند الاستلام');
         }
-        if ($paymentMethod->icon) Storage::disk('public')->delete($paymentMethod->icon);
+        if ($paymentMethod->icon) (new CloudinaryService())->delete($paymentMethod->icon);
         $paymentMethod->delete();
         return back()->with('success', 'تم حذف وسيلة الدفع');
     }

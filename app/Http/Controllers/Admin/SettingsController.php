@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SiteSetting;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
@@ -75,11 +75,10 @@ class SettingsController extends Controller
     private function replaceImageSetting(string $key, $file): string
     {
         $oldPath = SiteSetting::get($key);
-        if ($oldPath) {
-            Storage::disk('public')->delete($oldPath);
-        }
-
-        return $file->store('settings', 'public');
+        $cloudinary = new CloudinaryService();
+        $newImage = $cloudinary->upload($file, 'settings');
+        $cloudinary->delete($oldPath);
+        return $newImage;
     }
 
     /**
@@ -109,14 +108,9 @@ class SettingsController extends Controller
         if ($request->hasFile('notification_image')) {
             // Delete old if exists
             $oldPath = SiteSetting::get('notification_image');
-            if ($oldPath) {
-                Storage::disk('public')->delete($oldPath);
-            }
-
-            $image = $request->file('notification_image');
-            $imageName = 'notification_' . time() . '.' . $image->getClientOriginalExtension();
-            $path = $image->storeAs('settings', $imageName, 'public');
-            
+            $cloudinary = new CloudinaryService();
+            $path = $cloudinary->upload($request->file('notification_image'), 'notifications');
+            $cloudinary->delete($oldPath);
             SiteSetting::set('notification_image', $path);
         }
 
@@ -137,8 +131,7 @@ class SettingsController extends Controller
         }
 
         if ($request->hasFile('notification_image')) {
-            $image = $request->file('notification_image');
-            $path = $image->storeAs('notifications', 'notif_' . time() . '.' . $image->getClientOriginalExtension(), 'public');
+            $path = (new CloudinaryService())->upload($request->file('notification_image'), 'notifications');
             SiteSetting::set('notification_image', $path);
         }
 

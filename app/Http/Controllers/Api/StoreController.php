@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Store;
 use App\Models\StoreMenuSection;
 use App\Models\Product;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class StoreController extends Controller
 {
@@ -119,12 +119,13 @@ class StoreController extends Controller
             'banner' => 'nullable|image|max:4096',
         ]);
 
+        $cloudinary = new CloudinaryService();
         if ($request->hasFile('logo')) {
-            $validated['logo'] = $request->file('logo')->store('stores/logos', 'public');
+            $validated['logo'] = $cloudinary->upload($request->file('logo'), 'stores/logos');
         }
 
         if ($request->hasFile('banner')) {
-            $validated['banner'] = $request->file('banner')->store('stores/banners', 'public');
+            $validated['banner'] = $cloudinary->upload($request->file('banner'), 'stores/banners');
         }
 
         $store = Store::create($validated);
@@ -189,8 +190,9 @@ class StoreController extends Controller
             'image' => 'nullable|image|max:4096',
         ]);
 
+        $cloudinary = new CloudinaryService();
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products', 'public');
+            $validated['image'] = $cloudinary->upload($request->file('image'), 'products');
         }
 
         $validated['store_id'] = $store->id;

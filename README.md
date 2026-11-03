@@ -61,3 +61,9 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 ## Importing Eshaq media
 
 The import and download scripts use `ESHAQ_BASE_URL` as their configurable source base. Set it in the environment before running those scripts. The gifts importer writes image references as relative paths, and downloaded files are placed under `storage/app/public`.
+
+## Image storage
+
+The application is deployed on Vercel, where local files are not persistent. Configure `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in the deployment environment before uploading store, product, category, slider, or settings images. New uploads are stored as permanent Cloudinary URLs; uploads fail explicitly if Cloudinary is unavailable instead of saving an inaccessible temporary file.
+
+Existing database image paths that point to local storage or `/tmp` are not recoverable from Vercel after deployment. Re-upload those images from the admin panel after configuring Cloudinary.

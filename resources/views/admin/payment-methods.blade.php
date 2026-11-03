@@ -97,7 +97,7 @@
                         <tr>
                             <td style="text-align: center;">
                                 @if($method->icon)
-                                    <img src="{{ route('media.file', ['path' => $method->icon]) }}" style="width:42px;height:42px;object-fit:contain;border-radius:10px;background:{{ $method->background_color }};padding:5px;border:1px solid var(--border);">
+                                    <img src="{{ str_starts_with($method->icon, 'http') ? $method->icon : route('media.file', ['path' => $method->icon]) }}" style="width:42px;height:42px;object-fit:contain;border-radius:10px;background:{{ $method->background_color }};padding:5px;border:1px solid var(--border);">
                                 @else
                                     <div style="display:inline-flex;width:42px;height:42px;align-items:center;justify-content:center;border-radius:10px;background:{{ $method->background_color }};border:1px solid var(--border);color:var(--primary);">
                                         <i class="fa-solid fa-credit-card"></i>

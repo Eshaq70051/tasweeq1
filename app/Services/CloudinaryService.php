@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 class CloudinaryService
 {
@@ -26,9 +28,21 @@ class CloudinaryService
      */
     public function upload(UploadedFile $file, string $folder): string
     {
-        // إذا لم تكن بيانات Cloudinary مضبوطة، احفظ في /tmp (fallback)
-        if (empty($this->cloudName) || empty($this->apiKey)) {
-            return $this->storeInTmp($file, $folder);
+        $isConfigured = !empty($this->cloudName) && !empty($this->apiKey) && !empty($this->apiSecret);
+
+        if (app()->environment('testing') || (!$isConfigured && app()->environment('local'))) {
+            $path = Storage::disk('public')->putFile($folder, $file);
+            if ($path !== false) {
+                return $path;
+            }
+
+            throw new RuntimeException('Unable to store the uploaded image on the public disk.');
+        }
+
+        if (!$isConfigured) {
+            throw new RuntimeException(
+                'Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.'
+            );
         }
 
         $timestamp = time();
@@ -38,6 +52,10 @@ class CloudinaryService
         $tempPath = $file->getRealPath();
 
         $ch = curl_init();
+        if ($ch === false) {
+            throw new RuntimeException('Unable to initialize the Cloudinary upload request.');
+        }
+
         curl_setopt_array($ch, [
             CURLOPT_URL => $this->uploadUrl,
             CURLOPT_POST => true,
@@ -53,19 +71,22 @@ class CloudinaryService
         ]);
 
         $response = curl_exec($ch);
+        $curlError = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if ($httpCode === 200) {
-            $data = json_decode($response, true);
-            if (isset($data['secure_url'])) {
-                return $data['secure_url']; // نحفظ URL كامل في DB
-            }
+        $data = is_string($response) ? json_decode($response, true) : null;
+        if ($httpCode >= 200 && $httpCode < 300 && is_array($data) && !empty($data['secure_url'])) {
+            return $data['secure_url'];
         }
 
-        // fallback إذا فشل Cloudinary
-        \Log::error('Cloudinary upload failed', ['code' => $httpCode, 'response' => $response]);
-        return $this->storeInTmp($file, $folder);
+        \Log::error('Cloudinary upload failed', [
+            'code' => $httpCode,
+            'curl_error' => $curlError ?: null,
+            'response' => $response,
+        ]);
+
+        throw new RuntimeException('Cloudinary image upload failed. Check the server log for details.');
     }
 
     /**
@@ -100,15 +121,5 @@ class CloudinaryService
             curl_exec($ch);
             curl_close($ch);
         }
-    }
-
-    /**
-     * Fallback: حفظ في /tmp على Vercel (مؤقت، لا يستمر)
-     */
-    private function storeInTmp(UploadedFile $file, string $folder): string
-    {
-        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-        $file->move('/tmp/' . $folder, $filename);
-        return $folder . '/' . $filename;
     }
 }

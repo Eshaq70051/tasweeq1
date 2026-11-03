@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\ProductResource;
 use App\Models\Category;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class CategoryController extends Controller
@@ -86,7 +86,7 @@ class CategoryController extends Controller
         $data = $request->only(['name', 'description']);
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('categories', 'public');
+            $data['image'] = (new CloudinaryService())->upload($request->file('image'), 'categories');
         }
 
         $category = Category::create($data);
@@ -125,11 +125,9 @@ class CategoryController extends Controller
         $data = $request->only(['name', 'description']);
 
         if ($request->hasFile('image')) {
-            if ($category->image) {
-                Storage::disk('public')->delete($category->image);
-            }
-
-            $data['image'] = $request->file('image')->store('categories', 'public');
+            $cloudinary = new CloudinaryService();
+            $data['image'] = $cloudinary->upload($request->file('image'), 'categories');
+            $cloudinary->delete($category->getOriginal('image'));
         }
 
         $category->update($data);
@@ -153,7 +151,7 @@ class CategoryController extends Controller
         }
 
         if ($category->image) {
-            Storage::disk('public')->delete($category->image);
+            (new CloudinaryService())->delete($category->image);
         }
 
         $category->delete();

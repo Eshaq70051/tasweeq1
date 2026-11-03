@@ -39,7 +39,7 @@
         @forelse($sliders as $slider)
             <div class="panel" style="padding: 0; overflow: hidden; display: flex; flex-direction: column;">
                 <div style="width: 100%; height: 180px; background: #F8FBFB; display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 1px solid var(--border);">
-                    <img src="{{ route('media.file', ['path' => $slider->image_path]) }}" alt="{{ $slider->title ?? 'slider image' }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    <img src="{{ str_starts_with($slider->image_path, 'http') ? $slider->image_path : route('media.file', ['path' => $slider->image_path]) }}" alt="{{ $slider->title ?? 'slider image' }}" style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
 
                 <div style="padding: 18px; display: flex; flex-direction: column; flex: 1;">

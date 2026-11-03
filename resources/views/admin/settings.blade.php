@@ -18,7 +18,7 @@
                 @csrf
                 <div style="width: 100px; height: 100px; background: #F8FBFB; border-radius: 16px; border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden;">
                     @if(isset($settings['notification_image']))
-                        <img src="{{ route('media.file', ['path' => $settings['notification_image']]) }}" alt="notification image" style="width: 100%; height: 100%; object-fit: contain;">
+                        <img src="{{ str_starts_with($settings['notification_image'], 'http') ? $settings['notification_image'] : route('media.file', ['path' => $settings['notification_image']]) }}" alt="notification image" style="width: 100%; height: 100%; object-fit: contain;">
                     @else
                         <i class="fa-solid fa-image" style="font-size: 28px; color: #CBD5E1;"></i>
                     @endif
@@ -35,7 +35,7 @@
 
         <form action="{{ route('admin.settings.update') }}" method="POST" enctype="multipart/form-data">
             @csrf
-            
+
             <!-- الهوية البصرية -->
             <div class="panel">
                 <h3 style="margin: 0 0 20px; color: var(--primary); font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px;">
@@ -48,7 +48,7 @@
                             <label style="font-weight: 700; font-size: 13px;">{{ $imageLabel }}</label>
                             <div style="height: 120px; border: 1px dashed var(--border); border-radius: 14px; background: #F8FBFB; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 10px;">
                                 @if(!empty($settings[$imageKey]))
-                                    <img src="{{ route('media.file', ['path' => $settings[$imageKey]]) }}" alt="{{ $imageLabel }}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                    <img src="{{ str_starts_with($settings[$imageKey], 'http') ? $settings[$imageKey] : route('media.file', ['path' => $settings[$imageKey]]) }}" alt="{{ $imageLabel }}" style="max-width: 100%; max-height: 100%; object-fit: contain;">
                                 @else
                                     <span style="color: var(--text-muted); font-size: 12px; display: flex; align-items: center; gap: 6px;">
                                         <i class="fa-solid fa-image" style="color: #CBD5E1;"></i>

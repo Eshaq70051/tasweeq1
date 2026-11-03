@@ -6,6 +6,25 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 
+Route::get('/db-test', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        return response()->json([
+            'status' => 'connected',
+            'database' => \Illuminate\Support\Facades\DB::connection()->getDatabaseName(),
+            'users_count' => \App\Models\User::count(),
+            'pgsql_loaded' => extension_loaded('pdo_pgsql'),
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'class' => get_class($e),
+            'pgsql_loaded' => extension_loaded('pdo_pgsql'),
+        ], 500);
+    }
+});
+
 Route::get('/', function () {
     if (Auth::check() && Auth::user()->isAdmin()) {
         return redirect()->route('admin.dashboard');

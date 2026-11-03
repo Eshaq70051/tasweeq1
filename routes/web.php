@@ -7,31 +7,17 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\User;
 
 Route::get('/db-test', function () {
-    $default = config('database.default');
-    $cfg = config("database.connections.{$default}");
-    $pass = (string) config("database.connections.{$default}.password");
-    $pass_check = [
-        'length' => strlen($pass),
-        'starts_with' => substr($pass, 0, 3),
-        'ends_with' => substr($pass, -3),
-        'matches_local' => ($pass === 'eshaq777476080eshaq'),
-    ];
-    if (isset($cfg['password'])) $cfg['password'] = '***';
     try {
         \Illuminate\Support\Facades\DB::connection()->getPdo();
         return response()->json([
             'status' => 'connected',
-            'connection' => $default,
-            'pass_check' => $pass_check,
-            'config' => $cfg,
+            'database' => \Illuminate\Support\Facades\DB::connection()->getDatabaseName(),
             'users_count' => \App\Models\User::count(),
+            'products_count' => \App\Models\Product::count(),
         ]);
     } catch (\Throwable $e) {
         return response()->json([
             'status' => 'error',
-            'connection' => $default,
-            'pass_check' => $pass_check,
-            'config' => $cfg,
             'message' => $e->getMessage(),
         ], 500);
     }

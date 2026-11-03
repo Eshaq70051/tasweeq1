@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class CategoryController extends Controller
 {
@@ -18,15 +18,16 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name'        => 'required|string|max:255',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|max:2048',
+            'image'       => 'nullable|image|max:5120',
         ]);
 
         $data = $request->only(['name', 'description']);
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('categories', 'public');
+            $cloudinary = new CloudinaryService();
+            $data['image'] = $cloudinary->upload($request->file('image'), 'categories');
         }
 
         Category::create($data);
@@ -37,19 +38,17 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name'        => 'required|string|max:255',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|max:2048',
+            'image'       => 'nullable|image|max:5120',
         ]);
 
         $data = $request->only(['name', 'description']);
 
         if ($request->hasFile('image')) {
-            if ($category->image) {
-                Storage::disk('public')->delete($category->image);
-            }
-
-            $data['image'] = $request->file('image')->store('categories', 'public');
+            $cloudinary = new CloudinaryService();
+            $cloudinary->delete($category->image);
+            $data['image'] = $cloudinary->upload($request->file('image'), 'categories');
         }
 
         $category->update($data);
@@ -64,7 +63,8 @@ class CategoryController extends Controller
         }
 
         if ($category->image) {
-            Storage::disk('public')->delete($category->image);
+            $cloudinary = new CloudinaryService();
+            $cloudinary->delete($category->image);
         }
 
         $category->delete();

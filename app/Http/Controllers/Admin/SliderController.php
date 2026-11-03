@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketingSlider;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class SliderController extends Controller
 {
@@ -18,18 +18,19 @@ class SliderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'image' => 'required|image|max:2048',
+            'image' => 'required|image|max:5120',
             'title' => 'nullable|string|max:255',
-            'link' => 'nullable|string',
+            'link'  => 'nullable|string',
         ]);
 
-        $path = $request->file('image')->store('sliders', 'public');
+        $cloudinary = new CloudinaryService();
+        $path = $cloudinary->upload($request->file('image'), 'sliders');
 
         MarketingSlider::create([
-            'title' => $request->title,
+            'title'      => $request->title,
             'image_path' => $path,
-            'link' => $request->link,
-            'is_active' => true
+            'link'       => $request->link,
+            'is_active'  => true,
         ]);
 
         return redirect()->back()->with('success', 'تم إضافة السلايدر بنجاح');
@@ -43,7 +44,8 @@ class SliderController extends Controller
 
     public function destroy(MarketingSlider $slider)
     {
-        Storage::disk('public')->delete($slider->image_path);
+        $cloudinary = new CloudinaryService();
+        $cloudinary->delete($slider->image_path);
         $slider->delete();
         return redirect()->back()->with('success', 'تم حذف السلايدر بنجاح');
     }

@@ -7,8 +7,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\StoreMenuSection;
+use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class StoreController extends Controller
 {
@@ -42,9 +42,9 @@ class StoreController extends Controller
         $stores = $query->latest()->paginate(15)->withQueryString();
 
         $stats = [
-            'total' => Store::count(),
-            'open' => Store::where('is_open', true)->count(),
-            'featured' => Store::where('is_featured', true)->count(),
+            'total'       => Store::count(),
+            'open'        => Store::where('is_open', true)->count(),
+            'featured'    => Store::where('is_featured', true)->count(),
             'total_meals' => Product::whereNotNull('store_id')->count(),
         ];
 
@@ -54,37 +54,39 @@ class StoreController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'address' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:50',
-            'distance' => 'nullable|string|max:50',
+            'name'          => 'required|string|max:255',
+            'category_id'   => 'required|exists:categories,id',
+            'address'       => 'nullable|string|max:255',
+            'phone'         => 'nullable|string|max:50',
+            'distance'      => 'nullable|string|max:50',
             'delivery_time' => 'nullable|string|max:50',
-            'rating' => 'nullable|numeric|between:1,5',
-            'is_open' => 'nullable|boolean',
-            'is_featured' => 'nullable|boolean',
-            'logo' => 'nullable|image|max:2048',
-            'banner' => 'nullable|image|max:4096',
+            'rating'        => 'nullable|numeric|between:1,5',
+            'is_open'       => 'nullable|boolean',
+            'is_featured'   => 'nullable|boolean',
+            'logo'          => 'nullable|image|max:5120',
+            'banner'        => 'nullable|image|max:5120',
         ]);
 
         $data = [
-            'name' => $validated['name'],
-            'category_id' => $validated['category_id'],
-            'address' => $validated['address'] ?? '',
-            'phone' => $validated['phone'] ?? '',
-            'distance' => $validated['distance'] ?? '1.5 كم',
+            'name'          => $validated['name'],
+            'category_id'   => $validated['category_id'],
+            'address'       => $validated['address'] ?? '',
+            'phone'         => $validated['phone'] ?? '',
+            'distance'      => $validated['distance'] ?? '1.5 كم',
             'delivery_time' => $validated['delivery_time'] ?? '30-40 دقيقة',
-            'rating' => $validated['rating'] ?? 4.8,
-            'is_open' => $request->has('is_open'),
-            'is_featured' => $request->has('is_featured'),
+            'rating'        => $validated['rating'] ?? 4.8,
+            'is_open'       => $request->has('is_open'),
+            'is_featured'   => $request->has('is_featured'),
         ];
 
+        $cloudinary = new CloudinaryService();
+
         if ($request->hasFile('logo')) {
-            $data['logo'] = $request->file('logo')->store('stores/logos', 'public');
+            $data['logo'] = $cloudinary->upload($request->file('logo'), 'stores/logos');
         }
 
         if ($request->hasFile('banner')) {
-            $data['banner'] = $request->file('banner')->store('stores/banners', 'public');
+            $data['banner'] = $cloudinary->upload($request->file('banner'), 'stores/banners');
         }
 
         $store = Store::create($data);
@@ -113,43 +115,41 @@ class StoreController extends Controller
     public function update(Request $request, Store $store)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'address' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:50',
-            'distance' => 'nullable|string|max:50',
+            'name'          => 'required|string|max:255',
+            'category_id'   => 'required|exists:categories,id',
+            'address'       => 'nullable|string|max:255',
+            'phone'         => 'nullable|string|max:50',
+            'distance'      => 'nullable|string|max:50',
             'delivery_time' => 'nullable|string|max:50',
-            'rating' => 'nullable|numeric|between:1,5',
-            'is_open' => 'nullable|boolean',
-            'is_featured' => 'nullable|boolean',
-            'logo' => 'nullable|image|max:2048',
-            'banner' => 'nullable|image|max:4096',
+            'rating'        => 'nullable|numeric|between:1,5',
+            'is_open'       => 'nullable|boolean',
+            'is_featured'   => 'nullable|boolean',
+            'logo'          => 'nullable|image|max:5120',
+            'banner'        => 'nullable|image|max:5120',
         ]);
 
         $data = [
-            'name' => $validated['name'],
-            'category_id' => $validated['category_id'],
-            'address' => $validated['address'] ?? $store->address,
-            'phone' => $validated['phone'] ?? $store->phone,
-            'distance' => $validated['distance'] ?? $store->distance,
+            'name'          => $validated['name'],
+            'category_id'   => $validated['category_id'],
+            'address'       => $validated['address'] ?? $store->address,
+            'phone'         => $validated['phone'] ?? $store->phone,
+            'distance'      => $validated['distance'] ?? $store->distance,
             'delivery_time' => $validated['delivery_time'] ?? $store->delivery_time,
-            'rating' => $validated['rating'] ?? $store->rating,
-            'is_open' => $request->has('is_open'),
-            'is_featured' => $request->has('is_featured'),
+            'rating'        => $validated['rating'] ?? $store->rating,
+            'is_open'       => $request->has('is_open'),
+            'is_featured'   => $request->has('is_featured'),
         ];
 
+        $cloudinary = new CloudinaryService();
+
         if ($request->hasFile('logo')) {
-            if ($store->logo) {
-                Storage::disk('public')->delete($store->logo);
-            }
-            $data['logo'] = $request->file('logo')->store('stores/logos', 'public');
+            $cloudinary->delete($store->logo);
+            $data['logo'] = $cloudinary->upload($request->file('logo'), 'stores/logos');
         }
 
         if ($request->hasFile('banner')) {
-            if ($store->banner) {
-                Storage::disk('public')->delete($store->banner);
-            }
-            $data['banner'] = $request->file('banner')->store('stores/banners', 'public');
+            $cloudinary->delete($store->banner);
+            $data['banner'] = $cloudinary->upload($request->file('banner'), 'stores/banners');
         }
 
         $store->update($data);
@@ -159,24 +159,17 @@ class StoreController extends Controller
 
     public function destroy(Store $store)
     {
-        if ($store->logo) {
-            Storage::disk('public')->delete($store->logo);
-        }
-        if ($store->banner) {
-            Storage::disk('public')->delete($store->banner);
-        }
+        $cloudinary = new CloudinaryService();
 
-        // Delete associated products
+        if ($store->logo) $cloudinary->delete($store->logo);
+        if ($store->banner) $cloudinary->delete($store->banner);
+
         foreach ($store->products as $product) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
+            if ($product->image) $cloudinary->delete($product->image);
             $product->delete();
         }
 
-        // Delete menu sections
         $store->menuSections()->delete();
-
         $store->delete();
 
         return redirect()->route('admin.stores')->with('success', 'تم حذف المتجر وجميع أقسامه ووجباته بنجاح');
@@ -201,14 +194,14 @@ class StoreController extends Controller
     public function storeSection(Request $request, Store $store)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name'       => 'required|string|max:255',
             'sort_order' => 'nullable|integer',
         ]);
 
         $store->menuSections()->create([
-            'name' => $validated['name'],
+            'name'       => $validated['name'],
             'sort_order' => $validated['sort_order'] ?? ($store->menuSections()->max('sort_order') + 1),
-            'is_active' => true,
+            'is_active'  => true,
         ]);
 
         return back()->with('success', 'تم إضافة قسم المنيو بنجاح');
@@ -217,15 +210,15 @@ class StoreController extends Controller
     public function updateSection(Request $request, StoreMenuSection $section)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name'       => 'required|string|max:255',
             'sort_order' => 'nullable|integer',
-            'is_active' => 'nullable|boolean',
+            'is_active'  => 'nullable|boolean',
         ]);
 
         $section->update([
-            'name' => $validated['name'],
+            'name'       => $validated['name'],
             'sort_order' => $validated['sort_order'] ?? $section->sort_order,
-            'is_active' => $request->has('is_active'),
+            'is_active'  => $request->has('is_active'),
         ]);
 
         return back()->with('success', 'تم تحديث قسم المنيو بنجاح');
@@ -233,7 +226,6 @@ class StoreController extends Controller
 
     public function deleteSection(StoreMenuSection $section)
     {
-        // Unlink or delete products
         Product::where('store_menu_section_id', $section->id)->update(['store_menu_section_id' => null]);
         $section->delete();
 
@@ -245,31 +237,32 @@ class StoreController extends Controller
     public function storeProduct(Request $request, Store $store)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'old_price' => 'nullable|numeric|min:0',
-            'currency' => 'nullable|string|max:10',
-            'details' => 'nullable|string',
+            'name'                  => 'required|string|max:255',
+            'price'                 => 'required|numeric|min:0',
+            'old_price'             => 'nullable|numeric|min:0',
+            'currency'              => 'nullable|string|max:10',
+            'details'               => 'nullable|string',
             'store_menu_section_id' => 'nullable|exists:store_menu_sections,id',
-            'stock' => 'nullable|integer|min:0',
-            'image' => 'nullable|image|max:2048',
+            'stock'                 => 'nullable|integer|min:0',
+            'image'                 => 'nullable|image|max:5120',
         ]);
 
         $data = [
-            'name' => $validated['name'],
-            'price' => $validated['price'],
-            'old_price' => $validated['old_price'] ?? null,
-            'currency' => $validated['currency'] ?? 'ريال',
-            'details' => $validated['details'] ?? null,
-            'store_id' => $store->id,
+            'name'                  => $validated['name'],
+            'price'                 => $validated['price'],
+            'old_price'             => $validated['old_price'] ?? null,
+            'currency'              => $validated['currency'] ?? 'ريال',
+            'details'               => $validated['details'] ?? null,
+            'store_id'              => $store->id,
             'store_menu_section_id' => $validated['store_menu_section_id'] ?? null,
-            'category_id' => $store->category_id,
-            'stock' => $validated['stock'] ?? 100,
-            'is_available' => $request->has('is_available'),
+            'category_id'           => $store->category_id,
+            'stock'                 => $validated['stock'] ?? 100,
+            'is_available'          => $request->has('is_available'),
         ];
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('products', 'public');
+            $cloudinary = new CloudinaryService();
+            $data['image'] = $cloudinary->upload($request->file('image'), 'products');
         }
 
         Product::create($data);
@@ -280,32 +273,31 @@ class StoreController extends Controller
     public function updateProduct(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'old_price' => 'nullable|numeric|min:0',
-            'currency' => 'nullable|string|max:10',
-            'details' => 'nullable|string',
+            'name'                  => 'required|string|max:255',
+            'price'                 => 'required|numeric|min:0',
+            'old_price'             => 'nullable|numeric|min:0',
+            'currency'              => 'nullable|string|max:10',
+            'details'               => 'nullable|string',
             'store_menu_section_id' => 'nullable|exists:store_menu_sections,id',
-            'stock' => 'nullable|integer|min:0',
-            'image' => 'nullable|image|max:2048',
+            'stock'                 => 'nullable|integer|min:0',
+            'image'                 => 'nullable|image|max:5120',
         ]);
 
         $data = [
-            'name' => $validated['name'],
-            'price' => $validated['price'],
-            'old_price' => $validated['old_price'] ?? null,
-            'currency' => $validated['currency'] ?? $product->currency,
-            'details' => $validated['details'] ?? null,
+            'name'                  => $validated['name'],
+            'price'                 => $validated['price'],
+            'old_price'             => $validated['old_price'] ?? null,
+            'currency'              => $validated['currency'] ?? $product->currency,
+            'details'               => $validated['details'] ?? null,
             'store_menu_section_id' => $validated['store_menu_section_id'] ?? $product->store_menu_section_id,
-            'stock' => $validated['stock'] ?? $product->stock,
-            'is_available' => $request->has('is_available'),
+            'stock'                 => $validated['stock'] ?? $product->stock,
+            'is_available'          => $request->has('is_available'),
         ];
 
         if ($request->hasFile('image')) {
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $data['image'] = $request->file('image')->store('products', 'public');
+            $cloudinary = new CloudinaryService();
+            $cloudinary->delete($product->image);
+            $data['image'] = $cloudinary->upload($request->file('image'), 'products');
         }
 
         $product->update($data);
@@ -316,7 +308,8 @@ class StoreController extends Controller
     public function deleteProduct(Product $product)
     {
         if ($product->image) {
-            Storage::disk('public')->delete($product->image);
+            $cloudinary = new CloudinaryService();
+            $cloudinary->delete($product->image);
         }
 
         $product->delete();

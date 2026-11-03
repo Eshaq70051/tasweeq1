@@ -18,7 +18,7 @@ class Category extends Model
         if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
             return $this->image;
         }
-        return asset('media/' . ltrim($this->image, '/'));
+        return asset('storage/' . ltrim($this->image, '/'));
     }
 
     public function products()

@@ -1,4 +1,4 @@
 <?php
-header('Content-Type: text/plain');
-echo "HELLO FROM VERCEL PHP! Version: " . phpversion() . "\n";
-echo "Date: " . date('Y-m-d H:i:s');
+
+// Forward Vercel requests to Laravel's public entry point
+require __DIR__ . '/../public/index.php';

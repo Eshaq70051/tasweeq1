@@ -67,3 +67,5 @@ The import and download scripts use `ESHAQ_BASE_URL` as their configurable sourc
 The application is deployed on Vercel, where local files are not persistent. Configure `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` in the deployment environment before uploading store, product, category, slider, or settings images. New uploads are stored as permanent Cloudinary URLs; uploads fail explicitly if Cloudinary is unavailable instead of saving an inaccessible temporary file.
 
 Existing database image paths that point to local storage or `/tmp` are not recoverable from Vercel after deployment. Re-upload those images from the admin panel after configuring Cloudinary.
+
+The PostgreSQL connection reads `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` from the environment. Set `DB_CONNECTION=pgsql` and configure these variables in Vercel before deploying. The Cloudinary migration script reads the same Laravel environment configuration and does not store credentials in source code.

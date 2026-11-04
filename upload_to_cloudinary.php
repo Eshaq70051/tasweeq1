@@ -6,24 +6,39 @@
  * Usage: php upload_to_cloudinary.php
  */
 
-// ===== اضبط هذه القيم من Cloudinary Dashboard =====
-$CLOUD_NAME  = 'YOUR_CLOUD_NAME';   // مثال: dxyz123abc
-$API_KEY     = 'YOUR_API_KEY';      // مثال: 123456789012345
-$API_SECRET  = 'YOUR_API_SECRET';   // مثال: abcdefghijklmnopqrstuvwxyz
+$cloudinary = config('cloudinary');
+$database = config('database.connections.pgsql');
 
-// ===== إعداد قاعدة البيانات Supabase =====
-$DB_HOST     = 'aws-1-eu-central-1.pooler.supabase.com';
-$DB_PORT     = '5432';
-$DB_NAME     = 'postgres';
-$DB_USER     = 'postgres.jxoibykervmxjlhyvrkc';
-$DB_PASS     = 'eshaq777476080eshaq';
+$CLOUD_NAME = $cloudinary['cloud_name'] ?? '';
+$API_KEY = $cloudinary['api_key'] ?? '';
+$API_SECRET = $cloudinary['api_secret'] ?? '';
+$DB_HOST = $database['host'] ?? '';
+$DB_PORT = $database['port'] ?? '';
+$DB_NAME = $database['database'] ?? '';
+$DB_USER = $database['username'] ?? '';
+$DB_PASS = $database['password'] ?? '';
+$DB_SSLMODE = $database['sslmode'] ?? 'require';
 
 $STORAGE_PATH = __DIR__ . '/storage/app/public/';
 
-// =============================================
+$missingSettings = [];
+foreach ([
+    'CLOUDINARY_CLOUD_NAME' => $CLOUD_NAME,
+    'CLOUDINARY_API_KEY' => $API_KEY,
+    'CLOUDINARY_API_SECRET' => $API_SECRET,
+    'DB_HOST' => $DB_HOST,
+    'DB_PORT' => $DB_PORT,
+    'DB_DATABASE' => $DB_NAME,
+    'DB_USERNAME' => $DB_USER,
+    'DB_PASSWORD' => $DB_PASS,
+] as $setting => $value) {
+    if ($value === '') {
+        $missingSettings[] = $setting;
+    }
+}
 
-if ($CLOUD_NAME === 'YOUR_CLOUD_NAME') {
-    die("❌ يرجى تعديل CLOUD_NAME و API_KEY و API_SECRET في الملف أولاً!\n");
+if ($missingSettings !== []) {
+    die('❌ Missing environment settings: ' . implode(', ', $missingSettings) . "\n");
 }
 
 echo "🚀 بدء رفع الصور إلى Cloudinary...\n\n";
@@ -31,7 +46,7 @@ echo "🚀 بدء رفع الصور إلى Cloudinary...\n\n";
 // الاتصال بقاعدة البيانات
 try {
     $pdo = new PDO(
-        "pgsql:host={$DB_HOST};port={$DB_PORT};dbname={$DB_NAME};sslmode=require",
+        "pgsql:host={$DB_HOST};port={$DB_PORT};dbname={$DB_NAME};sslmode={$DB_SSLMODE}",
         $DB_USER,
         $DB_PASS,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]

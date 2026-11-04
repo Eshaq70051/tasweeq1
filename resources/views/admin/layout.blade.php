@@ -699,6 +699,29 @@
                 el.classList.toggle('open');
             }
         }
+
+        const prefetchedAdminPages = new Set();
+        const prefetchAdminPage = (link) => {
+            if (navigator.connection?.saveData) return;
+
+            const target = new URL(link.href, window.location.href);
+            if (target.origin !== window.location.origin ||
+                target.pathname === window.location.pathname ||
+                prefetchedAdminPages.has(target.href)) {
+                return;
+            }
+
+            const hint = document.createElement('link');
+            hint.rel = 'prefetch';
+            hint.href = target.href;
+            document.head.appendChild(hint);
+            prefetchedAdminPages.add(target.href);
+        };
+
+        document.querySelectorAll('.sidebar .nav a[href]').forEach((link) => {
+            link.addEventListener('pointerenter', () => prefetchAdminPage(link), { once: true });
+            link.addEventListener('focus', () => prefetchAdminPage(link), { once: true });
+        });
     </script>
 </body>
 </html>

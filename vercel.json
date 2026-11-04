@@ -11,12 +11,20 @@
     },
     "routes": [
         {
+            "src": "/media/stores/(.*)",
+            "dest": "/public/media/stores/$1"
+        },
+        {
+            "src": "/media/categories/(.*)",
+            "dest": "/public/media/categories/$1"
+        },
+        {
             "src": "/build/(.*)",
             "dest": "/public/build/$1"
         },
         {
             "src": "/storage/(.*)",
-            "dest": "/public/storage/$1"
+            "dest": "/public/media/$1"
         },
         {
             "src": "/favicon.ico",

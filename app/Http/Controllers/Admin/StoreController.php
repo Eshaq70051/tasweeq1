@@ -41,11 +41,18 @@ class StoreController extends Controller
 
         $stores = $query->latest()->paginate(15)->withQueryString();
 
+        // استعلام واحد بدلاً من 4 استعلامات منفصلة لتحسين الأداء
+        $storeStats = Store::selectRaw(
+            'COUNT(*) as total,
+             SUM(CASE WHEN is_open = true THEN 1 ELSE 0 END) as open,
+             SUM(CASE WHEN is_featured = true THEN 1 ELSE 0 END) as featured'
+        )->first();
+        $totalMeals = Product::whereNotNull('store_id')->count();
         $stats = [
-            'total'       => Store::count(),
-            'open'        => Store::where('is_open', true)->count(),
-            'featured'    => Store::where('is_featured', true)->count(),
-            'total_meals' => Product::whereNotNull('store_id')->count(),
+            'total'       => (int) ($storeStats->total ?? 0),
+            'open'        => (int) ($storeStats->open ?? 0),
+            'featured'    => (int) ($storeStats->featured ?? 0),
+            'total_meals' => $totalMeals,
         ];
 
         return view('admin.stores', compact('stores', 'categories', 'stats'));

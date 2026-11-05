@@ -6,17 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\SiteSetting;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 
 class SettingsController extends Controller
 {
     /**
-     * API: Get all settings
+     * API: Get all settings (مخزنة مؤقتاً 10 دقائق)
      */
     public function index()
     {
-        $settings = SiteSetting::all()->pluck('value', 'key');
-        
+        $settings = Cache::remember('site.settings', 600, function () {
+            return SiteSetting::all()->pluck('value', 'key');
+        });
+
         return response()->json([
             'success' => true,
             'data' => $settings
@@ -29,6 +32,7 @@ class SettingsController extends Controller
     public function update(Request $request)
     {
         $this->saveSettings($request->all());
+        Cache::forget('site.settings');
 
         return response()->json([
             'success' => true,
@@ -42,23 +46,23 @@ class SettingsController extends Controller
     public function updateFromWeb(Request $request)
     {
         $data = $request->validate([
-            'site_name' => 'nullable|string|max:100',
-            'site_tagline' => 'nullable|string|max:180',
-            'contact_phone' => 'nullable|string|max:40',
-            'contact_whatsapp' => 'nullable|string|max:40',
-            'contact_telegram' => 'nullable|string|max:100',
-            'contact_email' => 'nullable|email|max:150',
-            'discount_enabled' => 'nullable|boolean',
-            'discount_percent' => 'nullable|numeric|min:0|max:100',
-            'discount_text' => 'nullable|string|max:180',
-            'primary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'secondary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'notification_title' => 'nullable|string|max:120',
-            'notification_text' => 'nullable|string|max:300',
-            'logo' => 'nullable|image|max:2048',
-            'app_icon' => 'nullable|image|max:2048',
-            'home_banner' => 'nullable|image|max:4096',
+            'site_name'            => 'nullable|string|max:100',
+            'site_tagline'         => 'nullable|string|max:180',
+            'contact_phone'        => 'nullable|string|max:40',
+            'contact_whatsapp'     => 'nullable|string|max:40',
+            'contact_telegram'     => 'nullable|string|max:100',
+            'contact_email'        => 'nullable|email|max:150',
+            'discount_enabled'     => 'nullable|boolean',
+            'discount_percent'     => 'nullable|numeric|min:0|max:100',
+            'discount_text'        => 'nullable|string|max:180',
+            'primary_color'        => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'secondary_color'      => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'background_color'     => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'notification_title'   => 'nullable|string|max:120',
+            'notification_text'    => 'nullable|string|max:300',
+            'logo'                 => 'nullable|image|max:2048',
+            'app_icon'             => 'nullable|image|max:2048',
+            'home_banner'          => 'nullable|image|max:4096',
         ]);
 
         foreach (['logo', 'app_icon', 'home_banner'] as $imageKey) {
@@ -69,6 +73,8 @@ class SettingsController extends Controller
 
         unset($data['logo'], $data['app_icon'], $data['home_banner']);
         $this->saveSettings($data);
+        Cache::forget('site.settings');
+
         return redirect()->back()->with('success', 'تم حفظ الإعدادات بنجاح');
     }
 
@@ -106,7 +112,6 @@ class SettingsController extends Controller
         ]);
 
         if ($request->hasFile('notification_image')) {
-            // Delete old if exists
             $oldPath = SiteSetting::get('notification_image');
             $cloudinary = new CloudinaryService();
             $path = $cloudinary->upload($request->file('notification_image'), 'notifications');
@@ -114,6 +119,7 @@ class SettingsController extends Controller
             SiteSetting::set('notification_image', $path);
         }
 
+        Cache::forget('site.settings');
         return redirect()->back()->with('success', 'تم تحديث صورة الإشعارات بنجاح');
     }
 
@@ -135,6 +141,7 @@ class SettingsController extends Controller
             SiteSetting::set('notification_image', $path);
         }
 
+        Cache::forget('site.settings');
         return response()->json(['success' => true, 'message' => 'Notification image updated']);
     }
 }

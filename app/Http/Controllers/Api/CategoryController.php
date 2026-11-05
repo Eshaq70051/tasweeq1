@@ -8,13 +8,17 @@ use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 
 class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::withCount('products')->orderBy('name')->get();
+        // التصنيفات نادراً ما تتغير - cache 10 دقائق
+        $categories = Cache::remember('categories.all', 600, function () {
+            return Category::withCount('products')->orderBy('name')->get();
+        });
 
         return response()->json([
             'success' => true,

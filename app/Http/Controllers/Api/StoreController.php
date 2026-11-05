@@ -8,6 +8,7 @@ use App\Models\StoreMenuSection;
 use App\Models\Product;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class StoreController extends Controller
 {
@@ -61,15 +62,17 @@ class StoreController extends Controller
     }
 
     /**
-     * المتاجر الأكثر شعبية للشريط الدائري في الرئيسية
+     * المتاجر الأكثر شعبية للشريط الدائري في الرئيسية (مخزنة مؤقتاً 5 دقائق)
      */
     public function popular(Request $request)
     {
-        $stores = Store::where('is_open', true)
-            ->orderBy('is_featured', 'desc')
-            ->orderBy('rating', 'desc')
-            ->limit(16)
-            ->get();
+        $stores = Cache::remember('stores.popular', 300, function () {
+            return Store::where('is_open', true)
+                ->orderBy('is_featured', 'desc')
+                ->orderBy('rating', 'desc')
+                ->limit(16)
+                ->get();
+        });
 
         return response()->json([
             'status' => 'success',

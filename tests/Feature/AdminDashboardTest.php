@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Product;
+use App\Models\Store;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -23,10 +25,13 @@ class AdminDashboardTest extends TestCase
             'status' => 'active',
         ]);
 
-        foreach (['/admin/dashboard', '/admin/products', '/admin/orders', '/admin/settings', '/admin/users', '/admin/captains'] as $route) {
+        foreach (['/admin/dashboard', '/admin/stores', '/admin/orders', '/admin/settings', '/admin/users', '/admin/captains'] as $route) {
             $response = $this->actingAs($admin)->get($route);
             $response->assertOk();
         }
+
+        $legacyProductsResponse = $this->actingAs($admin)->get('/admin/products');
+        $legacyProductsResponse->assertRedirect(route('admin.stores'));
     }
 
     public function test_admin_can_create_a_category_with_image(): void
@@ -43,7 +48,7 @@ class AdminDashboardTest extends TestCase
         $response = $this->actingAs($admin)->post(route('admin.categories.store'), [
             'name' => 'أجهزة منزلية',
             'description' => 'أجهزة منزلية حديثة',
-            'image' => UploadedFile::fake()->image('category.jpg', 600, 400),
+            'image' => UploadedFile::fake()->create('category.jpg', 10, 'image/jpeg'),
         ]);
 
         $response->assertRedirect(route('admin.categories'));
@@ -99,17 +104,23 @@ class AdminDashboardTest extends TestCase
             'description' => 'منتجات إلكترونية',
         ]);
 
-        $response = $this->actingAs($admin)->post(route('admin.products.store'), [
-            'name' => 'منتج جديد',
-            'price' => '150',
-            'currency' => 'SAR',
-            'details' => 'وصف المنتج الجديد',
+        $store = Store::create([
             'category_id' => $category->id,
-            'stock' => '20',
+            'name' => 'متجر إلكترونيات',
         ]);
 
-        $response->assertRedirect(route('admin.products'));
-        $this->assertDatabaseHas('products', ['name' => 'منتج جديد']);
+        $response = $this->actingAs($admin)
+            ->from(route('admin.stores.show', $store))
+            ->post(route('admin.stores.products.store', $store), [
+                'name' => 'منتج جديد',
+                'price' => '150',
+                'currency' => 'SAR',
+                'details' => 'وصف المنتج الجديد',
+                'stock' => '20',
+            ]);
+
+        $response->assertRedirect(route('admin.stores.show', $store));
+        $this->assertDatabaseHas('products', ['name' => 'منتج جديد', 'store_id' => $store->id]);
     }
 
     public function test_admin_can_update_and_delete_a_product(): void
@@ -128,7 +139,13 @@ class AdminDashboardTest extends TestCase
             'description' => 'ملابس رجالية ونسائية',
         ]);
 
-        $product = \App\Models\Product::create([
+        $store = Store::create([
+            'category_id' => $category->id,
+            'name' => 'متجر الملابس',
+        ]);
+
+        $product = Product::create([
+            'store_id' => $store->id,
             'name' => 'قميص قديم',
             'price' => 100,
             'currency' => 'SAR',
@@ -137,20 +154,23 @@ class AdminDashboardTest extends TestCase
             'stock' => 5,
         ]);
 
-        $updateResponse = $this->actingAs($admin)->post(route('admin.products.update', $product), [
-            'name' => 'قميص جديد',
-            'price' => '120',
-            'currency' => 'SAR',
-            'details' => 'وصف جديد',
-            'category_id' => $category->id,
-            'stock' => '10',
-        ]);
+        $updateResponse = $this->actingAs($admin)
+            ->from(route('admin.stores.show', $store))
+            ->post(route('admin.stores.products.update', $product), [
+                'name' => 'قميص جديد',
+                'price' => '120',
+                'currency' => 'SAR',
+                'details' => 'وصف جديد',
+                'stock' => '10',
+            ]);
 
-        $updateResponse->assertRedirect(route('admin.products'));
+        $updateResponse->assertRedirect(route('admin.stores.show', $store));
         $this->assertDatabaseHas('products', ['id' => $product->id, 'name' => 'قميص جديد']);
 
-        $deleteResponse = $this->actingAs($admin)->post(route('admin.products.delete', $product));
-        $deleteResponse->assertRedirect(route('admin.products'));
+        $deleteResponse = $this->actingAs($admin)
+            ->from(route('admin.stores.show', $store))
+            ->post(route('admin.stores.products.delete', $product));
+        $deleteResponse->assertRedirect(route('admin.stores.show', $store));
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 

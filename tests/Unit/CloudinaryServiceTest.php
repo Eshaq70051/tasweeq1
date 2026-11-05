@@ -17,9 +17,6 @@ class CloudinaryServiceTest extends TestCase
             'cloudinary.api_secret' => '',
         ]);
 
-        $filePath = tempnam(sys_get_temp_dir(), 'vercel-upload-');
-        file_put_contents($filePath, 'test image');
-
         $previousVercel = getenv('VERCEL');
         putenv('VERCEL=1');
         $_ENV['VERCEL'] = '1';
@@ -30,12 +27,16 @@ class CloudinaryServiceTest extends TestCase
             $this->expectExceptionMessage('Cloudinary is not configured.');
 
             app(CloudinaryService::class)->upload(
-                new UploadedFile($filePath, 'logo.jpg', 'image/jpeg', null, true),
+                new UploadedFile(
+                    base_path('storage/app/public/stores/logos/1792822564.jpg'),
+                    'logo.jpg',
+                    'image/jpeg',
+                    null,
+                    true,
+                ),
                 'stores/logos',
             );
         } finally {
-            unlink($filePath);
-
             if ($previousVercel === false) {
                 putenv('VERCEL');
                 unset($_ENV['VERCEL'], $_SERVER['VERCEL']);

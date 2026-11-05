@@ -13,8 +13,8 @@
     <div class="panel" style="margin-bottom: 25px; background: linear-gradient(135deg, #ffffff 0%, #f4fbfb 100%); border: 1px solid var(--border);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div style="display: flex; align-items: center; gap: 18px;">
-                @if($store->logo_url)
-                    <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(6, 132, 148, 0.15);">
+                @if($store->logo)
+                    <img src="{{ str_starts_with($store->logo, 'http') ? $store->logo : route('media.file', ['path' => $store->logo]) }}" alt="{{ $store->name }}" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary); box-shadow: 0 4px 12px rgba(6, 132, 148, 0.15);">
                 @else
                     <div style="width: 70px; height: 70px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 28px;">
                         <i class="fa-solid fa-store"></i>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
@@ -80,7 +81,7 @@ class CloudinaryService
             return $data['secure_url'];
         }
 
-        \Log::error('Cloudinary upload failed', [
+        Log::error('Cloudinary upload failed', [
             'code' => $httpCode,
             'curl_error' => $curlError ?: null,
             'response' => $response,

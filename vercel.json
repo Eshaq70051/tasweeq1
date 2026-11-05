@@ -2,8 +2,8 @@
     "version": 2,
     "framework": null,
     "outputDirectory": "public",
-    "installCommand": "composer install --no-dev --optimize-autoloader --no-interaction",
-    "buildCommand": "php artisan view:cache 2>/dev/null || true",
+    "installCommand": "npm install",
+    "buildCommand": "npm run build",
     "functions": {
         "api/index.php": {
             "runtime": "vercel-php@0.8.0"

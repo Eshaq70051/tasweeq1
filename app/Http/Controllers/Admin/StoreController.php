@@ -150,15 +150,13 @@ class StoreController extends Controller
         $cloudinary = new CloudinaryService();
 
         if ($request->hasFile('logo')) {
-            $newLogo = $cloudinary->upload($request->file('logo'), 'stores/logos');
             $cloudinary->delete($store->logo);
-            $data['logo'] = $newLogo;
+            $data['logo'] = $cloudinary->upload($request->file('logo'), 'stores/logos');
         }
 
         if ($request->hasFile('banner')) {
-            $newBanner = $cloudinary->upload($request->file('banner'), 'stores/banners');
             $cloudinary->delete($store->banner);
-            $data['banner'] = $newBanner;
+            $data['banner'] = $cloudinary->upload($request->file('banner'), 'stores/banners');
         }
 
         $store->update($data);

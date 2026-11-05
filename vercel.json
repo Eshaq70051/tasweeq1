@@ -11,7 +11,12 @@
     },
     "routes": [
         {
-            "handle": "filesystem"
+            "src": "/media/stores/(.*)",
+            "dest": "/public/media/stores/$1"
+        },
+        {
+            "src": "/media/categories/(.*)",
+            "dest": "/public/media/categories/$1"
         },
         {
             "src": "/build/(.*)",

@@ -115,16 +115,16 @@
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label style="font-weight: 700; font-size: 13px;">شعار المتجر (دائري)</label>
                     <input type="file" name="logo" accept="image/*" style="padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: white;">
-                    @if($editingStore && $editingStore->logo_url)
-                        <img src="{{ $editingStore->logo_url }}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-top: 6px; border: 2px solid var(--primary);">
+                    @if($editingStore && $editingStore->logo)
+                        <img src="{{ str_starts_with($editingStore->logo, 'http') ? $editingStore->logo : route('media.file', ['path' => $editingStore->logo]) }}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; margin-top: 6px; border: 2px solid var(--primary);">
                     @endif
                 </div>
 
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label style="font-weight: 700; font-size: 13px;">صورة الغلاف / البانر</label>
                     <input type="file" name="banner" accept="image/*" style="padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: white;">
-                    @if($editingStore && $editingStore->banner_url)
-                        <img src="{{ $editingStore->banner_url }}" style="width: 90px; height: 45px; border-radius: 8px; object-fit: cover; margin-top: 6px; border: 1px solid var(--border);">
+                    @if($editingStore && $editingStore->banner)
+                        <img src="{{ str_starts_with($editingStore->banner, 'http') ? $editingStore->banner : route('media.file', ['path' => $editingStore->banner]) }}" style="width: 90px; height: 45px; border-radius: 8px; object-fit: cover; margin-top: 6px; border: 1px solid var(--border);">
                     @endif
                 </div>
             </div>
@@ -223,8 +223,8 @@
                         <tr>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 12px;">
-                                    @if($store->logo_url)
-                                        <img src="{{ $store->logo_url }}" alt="{{ $store->name }}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-soft);">
+                                    @if($store->logo)
+                                        <img src="{{ str_starts_with($store->logo, 'http') ? $store->logo : route('media.file', ['path' => $store->logo]) }}" alt="{{ $store->name }}" style="width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-soft);">
                                     @else
                                         <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">
                                             <i class="fa-solid fa-store"></i>

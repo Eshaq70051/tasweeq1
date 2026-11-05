@@ -31,7 +31,10 @@ class CloudinaryService
     {
         $isConfigured = !empty($this->cloudName) && !empty($this->apiKey) && !empty($this->apiSecret);
 
-        if (app()->environment('testing') || (!$isConfigured && app()->environment('local'))) {
+        if (
+            ! $this->isRunningOnVercel()
+            && (app()->environment('testing') || (!$isConfigured && app()->environment('local')))
+        ) {
             $path = Storage::disk('public')->putFile($folder, $file);
             if ($path !== false) {
                 return $path;
@@ -88,6 +91,18 @@ class CloudinaryService
         ]);
 
         throw new RuntimeException('Cloudinary image upload failed. Check the server log for details.');
+    }
+
+    private function isRunningOnVercel(): bool
+    {
+        foreach (['VERCEL', 'VERCEL_ENV', 'VERCEL_URL'] as $name) {
+            $value = $_SERVER[$name] ?? $_ENV[$name] ?? getenv($name);
+            if ($value !== false && $value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

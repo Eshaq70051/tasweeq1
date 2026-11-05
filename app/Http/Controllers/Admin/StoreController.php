@@ -143,16 +143,24 @@ class StoreController extends Controller
         $cloudinary = new CloudinaryService();
 
         if ($request->hasFile('logo')) {
-            $cloudinary->delete($store->logo);
             $data['logo'] = $cloudinary->upload($request->file('logo'), 'stores/logos');
         }
 
         if ($request->hasFile('banner')) {
-            $cloudinary->delete($store->banner);
             $data['banner'] = $cloudinary->upload($request->file('banner'), 'stores/banners');
         }
 
+        $previousLogo = $store->logo;
+        $previousBanner = $store->banner;
         $store->update($data);
+
+        if ($request->hasFile('logo')) {
+            $cloudinary->delete($previousLogo);
+        }
+
+        if ($request->hasFile('banner')) {
+            $cloudinary->delete($previousBanner);
+        }
 
         return back()->with('success', 'تم تحديث بيانات المتجر بنجاح');
     }

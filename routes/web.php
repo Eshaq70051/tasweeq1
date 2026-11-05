@@ -22,12 +22,30 @@ Route::get('/admin', function () {
 });
 
 Route::get('/media/{path}', function (string $path) {
+    $publicPath = public_path('media/' . $path);
+    if (file_exists($publicPath)) {
+        return response()->file($publicPath);
+    }
+
     if (Storage::disk('public')->exists($path)) {
         return response()->file(Storage::disk('public')->path($path));
     }
 
     abort(404);
 })->where('path', '.*')->name('media.file');
+
+Route::get('/storage/{path}', function (string $path) {
+    $publicPath = public_path('media/' . $path);
+    if (file_exists($publicPath)) {
+        return response()->file($publicPath);
+    }
+
+    if (Storage::disk('public')->exists($path)) {
+        return response()->file(Storage::disk('public')->path($path));
+    }
+
+    abort(404);
+})->where('path', '.*');
 
 Route::get('/login', function () {
     return view('auth.login');

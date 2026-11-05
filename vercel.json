@@ -36,8 +36,16 @@
         }
     ],
     "env": {
+        "APP_NAME": "tasweeq",
         "APP_ENV": "production",
+        "APP_KEY": "base64:1fwl6k1eXxWqh6sQUxe1XFh0yCPTvV+J4MnSid9i38M=",
         "APP_DEBUG": "false",
+        "DB_CONNECTION": "pgsql",
+        "DB_HOST": "aws-1-eu-central-1.pooler.supabase.com",
+        "DB_PORT": "5432",
+        "DB_DATABASE": "postgres",
+        "DB_USERNAME": "postgres.jxoibykervmxjlhyvrkc",
+        "DB_PASSWORD": "eshaq777476080eshaq",
         "APP_CONFIG_CACHE": "/tmp/config.php",
         "APP_EVENTS_CACHE": "/tmp/events.php",
         "APP_PACKAGES_CACHE": "/tmp/packages.php",

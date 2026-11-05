@@ -40,8 +40,8 @@
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <label style="font-weight: 700; font-size: 13px;">أيقونة / صورة التصنيف</label>
                     <input type="file" name="image" accept="image/*" style="padding: 9px; border-radius: 12px; border: 1px solid var(--border); background: #fff;">
-                    @if($editingCategory && $editingCategory->image)
-                        <img src="{{ str_starts_with($editingCategory->image, 'http') ? $editingCategory->image : route('media.file', ['path' => $editingCategory->image]) }}" alt="category image" style="width: 60px; height: 60px; object-fit: contain; background: #f8f9fa; border-radius: 10px; margin-top: 8px; border: 1px solid var(--border);">
+                    @if($editingCategory && $editingCategory->image_url)
+                        <img src="{{ $editingCategory->image_url }}" alt="category image" style="width: 60px; height: 60px; object-fit: contain; background: #f8f9fa; border-radius: 10px; margin-top: 8px; border: 1px solid var(--border);">
                     @endif
                 </div>
             </div>
@@ -73,7 +73,7 @@
                                 <div style="display: flex; align-items: center; gap: 12px;">
                                     <div style="width: 40px; height: 40px; border-radius: 10px; background: var(--primary-soft); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
                                         @if($category->image)
-                                            <img src="{{ str_starts_with($category->image, 'http') ? $category->image : route('media.file', ['path' => $category->image]) }}" alt="{{ $category->name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">
+                                            <img src="{{ $category->image_url }}" alt="{{ $category->name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 10px;">
                                         @else
                                             <i class="fa-solid fa-shapes"></i>
                                         @endif

@@ -6,7 +6,9 @@
     "buildCommand": "npm run build",
     "functions": {
         "api/index.php": {
-            "runtime": "vercel-php@0.8.0"
+            "runtime": "vercel-php@0.8.0",
+            "memory": 1024,
+            "maxDuration": 30
         }
     },
     "routes": [
@@ -52,8 +54,8 @@
         "APP_ROUTES_CACHE": "/tmp/routes.php",
         "APP_SERVICES_CACHE": "/tmp/services.php",
         "VIEW_COMPILED_PATH": "/tmp",
-        "CACHE_STORE": "array",
-        "CACHE_DRIVER": "array",
+        "CACHE_STORE": "database",
+        "CACHE_DRIVER": "database",
         "SESSION_DRIVER": "cookie",
         "LOG_CHANNEL": "stderr"
     }

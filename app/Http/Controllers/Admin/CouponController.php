@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCouponRequest;
 use App\Http\Requests\UpdateCouponRequest;
 use App\Models\Coupon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CouponController extends Controller
 {
@@ -36,11 +37,13 @@ class CouponController extends Controller
 
         $coupons = $query->latest()->paginate(15)->withQueryString();
 
-        $stats = [
-            'total' => Coupon::count(),
-            'active' => Coupon::where('is_active', true)->count(),
-            'total_uses' => Coupon::sum('used_count'),
-        ];
+        $stats = Cache::remember('admin.coupons.stats', 60, function () {
+            return [
+                'total' => Coupon::count(),
+                'active' => Coupon::where('is_active', true)->count(),
+                'total_uses' => Coupon::sum('used_count'),
+            ];
+        });
 
         return view('admin.coupons', compact('coupons', 'stats'));
     }
@@ -52,6 +55,7 @@ class CouponController extends Controller
         $validated['is_active'] = $request->boolean('is_active', true);
 
         Coupon::create($validated);
+        Cache::forget('admin.coupons.stats');
 
         return redirect()->route('admin.coupons')->with('success', 'تم إنشاء كود الخصم بنجاح');
     }
@@ -63,6 +67,7 @@ class CouponController extends Controller
         $validated['is_active'] = $request->boolean('is_active', true);
 
         $coupon->update($validated);
+        Cache::forget('admin.coupons.stats');
 
         return redirect()->route('admin.coupons')->with('success', 'تم تحديث بيانات الكوبون بنجاح');
     }
@@ -71,6 +76,7 @@ class CouponController extends Controller
     {
         $coupon->is_active = !$coupon->is_active;
         $coupon->save();
+        Cache::forget('admin.coupons.stats');
 
         return redirect()->back()->with('success', 'تم تحديث حالة تفعيل الكوبون بنجاح');
     }
@@ -78,6 +84,7 @@ class CouponController extends Controller
     public function destroy(Coupon $coupon)
     {
         $coupon->delete();
+        Cache::forget('admin.coupons.stats');
 
         return redirect()->route('admin.coupons')->with('success', 'تم حذف كود الخصم بنجاح');
     }

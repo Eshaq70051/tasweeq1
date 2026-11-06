@@ -19,25 +19,33 @@ use App\Services\OrderNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 
 class AdminPanelController extends Controller
 {
     public function dashboard()
     {
-        $stats = [
-            'total_stores' => Store::count(),
-            'total_orders' => Order::count(),
-            'total_users' => User::count(),
-            'total_products' => Product::count(),
-            'pending_orders' => Order::where('status', 'pending')->count(),
-            'low_stock_products' => Product::where('stock', '>', 0)->whereColumn('stock', '<=', 'low_stock_threshold')->count(),
-            'today_orders' => Order::whereDate('created_at', today())->count(),
-            'total_revenue' => Order::where('status', 'completed')->sum('total_amount'),
-        ];
+        $stats = Cache::remember('admin.dashboard.stats', 60, function () {
+            return [
+                'total_stores' => Store::count(),
+                'total_orders' => Order::count(),
+                'total_users' => User::count(),
+                'total_products' => Product::count(),
+                'pending_orders' => Order::where('status', 'pending')->count(),
+                'low_stock_products' => Product::where('stock', '>', 0)->whereColumn('stock', '<=', 'low_stock_threshold')->count(),
+                'today_orders' => Order::whereDate('created_at', today())->count(),
+                'total_revenue' => Order::where('status', 'completed')->sum('total_amount'),
+            ];
+        });
 
-        $recent_orders = Order::with('user')->orderBy('created_at', 'desc')->limit(5)->get();
-        $top_products = Product::withCount('orderItems')->orderBy('order_items_count', 'desc')->limit(4)->get();
+        $recent_orders = Cache::remember('admin.dashboard.recent_orders', 30, function () {
+            return Order::with('user')->orderBy('created_at', 'desc')->limit(5)->get();
+        });
+
+        $top_products = Cache::remember('admin.dashboard.top_products', 60, function () {
+            return Product::withCount('orderItems')->orderBy('order_items_count', 'desc')->limit(4)->get();
+        });
 
         return view('admin.dashboard', compact('stats', 'recent_orders', 'top_products'));
     }

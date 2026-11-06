@@ -30,6 +30,30 @@
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--bg); font-family: 'Cairo', sans-serif; color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
 
+        /* High-speed Page Progress Loader */
+        #top-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #068494, #27AE60, #F2994A);
+            z-index: 99999;
+            transform: scaleX(0);
+            transform-origin: 0 0;
+            transition: transform 0.25s ease-out, opacity 0.2s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        #top-loader.loading {
+            opacity: 1;
+            transform: scaleX(0.7);
+        }
+        #top-loader.done {
+            transform: scaleX(1);
+            opacity: 0;
+        }
+
         /* Sidebar Responsive Logic & Modern Styling */
         .sidebar {
             width: var(--sidebar-width);
@@ -479,6 +503,7 @@
     </style>
 </head>
 <body>
+    <div id="top-loader"></div>
     <div class="sidebar-overlay" id="overlay" onclick="toggleMenu()"></div>
     
         <aside class="sidebar" id="sidebar">
@@ -699,6 +724,142 @@
                 el.classList.toggle('open');
             }
         }
+
+        // ===== Fast SPA Navigation & Hover Prefetching =====
+        (function() {
+            const pageCache = new Map();
+            const loader = document.getElementById('top-loader');
+
+            function showLoader() {
+                if (loader) {
+                    loader.classList.remove('done');
+                    loader.classList.add('loading');
+                }
+            }
+
+            function hideLoader() {
+                if (loader) {
+                    loader.classList.add('done');
+                    loader.classList.remove('loading');
+                }
+            }
+
+            function isEligibleLink(anchor) {
+                if (!anchor || anchor.tagName !== 'A') return false;
+                const href = anchor.getAttribute('href');
+                if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('#')) return false;
+                if (anchor.target && anchor.target !== '_self') return false;
+                if (anchor.hasAttribute('download')) return false;
+                if (anchor.getAttribute('onclick') && anchor.getAttribute('onclick').includes('logout-form')) return false;
+                
+                try {
+                    const url = new URL(anchor.href, window.location.origin);
+                    return url.origin === window.location.origin && url.pathname.startsWith('/admin');
+                } catch(e) {
+                    return false;
+                }
+            }
+
+            async function prefetchUrl(url) {
+                if (pageCache.has(url)) return;
+                try {
+                    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                    if (res.ok) {
+                        const html = await res.text();
+                        pageCache.set(url, html);
+                    }
+                } catch(e) {}
+            }
+
+            // Prefetch on hover or touchstart with 50ms debounce
+            document.addEventListener('mouseover', function(e) {
+                const a = e.target.closest('a');
+                if (isEligibleLink(a)) {
+                    prefetchUrl(a.href);
+                }
+            }, { passive: true });
+
+            document.addEventListener('touchstart', function(e) {
+                const a = e.target.closest('a');
+                if (isEligibleLink(a)) {
+                    prefetchUrl(a.href);
+                }
+            }, { passive: true });
+
+            async function navigateTo(url, push = true) {
+                showLoader();
+                try {
+                    let html = pageCache.get(url);
+                    if (!html) {
+                        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                        if (!res.ok) {
+                            window.location.href = url;
+                            return;
+                        }
+                        html = await res.text();
+                        pageCache.set(url, html);
+                    }
+
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    const newMain = doc.querySelector('.main-content');
+                    const currentMain = document.querySelector('.main-content');
+                    if (!newMain || !currentMain) {
+                        window.location.href = url;
+                        return;
+                    }
+
+                    currentMain.innerHTML = newMain.innerHTML;
+                    document.title = doc.title;
+
+                    if (push) {
+                        window.history.pushState({ url }, '', url);
+                    }
+
+                    // Update active nav links
+                    const currentPath = new URL(url).pathname;
+                    document.querySelectorAll('.sidebar .nav a').forEach(a => {
+                        const linkPath = new URL(a.href, window.location.origin).pathname;
+                        if (linkPath === currentPath) {
+                            a.classList.add('active');
+                        } else {
+                            a.classList.remove('active');
+                        }
+                    });
+
+                    // Re-run inline scripts
+                    currentMain.querySelectorAll('script').forEach(oldScript => {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    });
+
+                    window.scrollTo({ top: 0, behavior: 'instant' });
+                    hideLoader();
+                } catch(err) {
+                    window.location.href = url;
+                }
+            }
+
+            document.addEventListener('click', function(e) {
+                const a = e.target.closest('a');
+                if (isEligibleLink(a)) {
+                    if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+                    e.preventDefault();
+                    navigateTo(a.href);
+                }
+            });
+
+            window.addEventListener('popstate', function(e) {
+                if (e.state && e.state.url) {
+                    navigateTo(e.state.url, false);
+                } else {
+                    navigateTo(window.location.href, false);
+                }
+            });
+        })();
     </script>
 </body>
 </html>

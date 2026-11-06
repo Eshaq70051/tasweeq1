@@ -97,6 +97,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => env('DB_SCHEMA', 'public'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'options' => extension_loaded('pdo_pgsql') ? [
+                \PDO::ATTR_TIMEOUT => 6,
+                \PDO::ATTR_EMULATE_PREPARES => true,
+            ] : [],
         ],
 
         'postgres' => [
@@ -112,6 +116,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => env('DB_SCHEMA', 'public'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'options' => extension_loaded('pdo_pgsql') ? [
+                \PDO::ATTR_TIMEOUT => 6,
+                \PDO::ATTR_EMULATE_PREPARES => true,
+            ] : [],
         ],
 
         'sqlsrv' => [

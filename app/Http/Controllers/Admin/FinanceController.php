@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\CaptainWalletService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -26,84 +27,83 @@ class FinanceController extends Controller
         $today = Carbon::today();
         $thisMonth = Carbon::now()->format('Y-m');
 
-        // إجمالي مبيعات الطلبات المكتملة
-        $completedOrders = Order::where('status', 'completed');
-        $totalSales = (float) (clone $completedOrders)->sum('total_amount');
-        $thisMonthSales = (float) (clone $completedOrders)->whereYear('created_at', Carbon::now()->year)
-            ->whereMonth('created_at', Carbon::now()->month)->sum('total_amount');
+        $stats = Cache::remember('finance.overview.stats', 45, function () use ($thisMonth) {
+            // إجمالي مبيعات الطلبات المكتملة
+            $completedOrders = Order::where('status', 'completed');
+            $totalSales = (float) (clone $completedOrders)->sum('total_amount');
+            $thisMonthSales = (float) (clone $completedOrders)->whereYear('created_at', Carbon::now()->year)
+                ->whereMonth('created_at', Carbon::now()->month)->sum('total_amount');
 
-        // عمولات التطبيق التقديرية (10% افتراضي أو من تفاصيل الطلب)
-        $totalAppCommission = (float) (clone $completedOrders)->sum('app_commission');
-        if ($totalAppCommission <= 0 && $totalSales > 0) {
-            $totalAppCommission = round($totalSales * 0.10, 2);
-        }
-
-        // عمولات الكباتن المكتسبة
-        $totalCaptainCommissions = (float) (clone $completedOrders)->sum('captain_commission');
-
-        // الكاش المحصل لدى الكباتن
-        $totalCashCollected = (float) (clone $completedOrders)->where('payment_method', 'cash')->sum('total_amount');
-
-        // مديونيات الكباتن الإجمالية
-        $captains = User::where('role', 'captain')->get();
-        $totalCaptainsDebt = 0;
-        $walletService = app(CaptainWalletService::class);
-        foreach ($captains as $captain) {
-            $summary = $walletService->getCaptainFinancialSummary($captain);
-            $totalCaptainsDebt += $summary['outstanding_debt'];
-        }
-
-        // إجمالي المستحقات للمطاعم
-        $stores = Store::all();
-        $totalStoresNetDue = 0;
-        $totalStoresDebit = 0;
-        $totalStoresCredit = 0;
-        foreach ($stores as $store) {
-            $summary = $store->getFinancialSummary();
-            $totalStoresDebit += $summary['total_debit'];
-            $totalStoresCredit += $summary['total_credit'];
-            if ($summary['balance'] > 0) {
-                $totalStoresNetDue += $summary['balance'];
+            // عمولات التطبيق التقديرية (10% افتراضي أو من تفاصيل الطلب)
+            $totalAppCommission = (float) (clone $completedOrders)->sum('app_commission');
+            if ($totalAppCommission <= 0 && $totalSales > 0) {
+                $totalAppCommission = round($totalSales * 0.10, 2);
             }
-        }
 
-        // إجمالي الرواتب المصروفة هذا الشهر
-        $paidSalariesThisMonth = (float) Salary::where('month', $thisMonth)->where('status', 'paid')->sum('paid_amount');
-        $pendingSalariesThisMonth = (float) Salary::where('month', $thisMonth)->where('status', '!=', 'paid')->sum('net_salary');
+            // عمولات الكباتن المكتسبة
+            $totalCaptainCommissions = (float) (clone $completedOrders)->sum('captain_commission');
 
-        // السندات وحركات الصندوق
-        $totalReceipts = (float) FinancialTransaction::where('type', 'receipt')->sum('amount');
-        $totalPayments = (float) FinancialTransaction::where('type', 'payment')->sum('amount');
-        $netCashFlow = $totalReceipts - $totalPayments;
+            // الكاش المحصل لدى الكباتن
+            $totalCashCollected = (float) (clone $completedOrders)->where('payment_method', 'cash')->sum('total_amount');
+
+            // مديونيات الكباتن الإجمالية (محسوبة بتجميع مباشر وفوري بدلاً من حلقات التكرار)
+            $totalPaidDebt = (float) \App\Models\CaptainPayment::where('status', 'approved')->sum('amount');
+            $captainExtraReceipts = (float) FinancialTransaction::where('party_type', 'captain')->where('type', 'receipt')->sum('amount');
+            $captainManualDebit = (float) FinancialTransaction::where('party_type', 'captain')->where('direction', 'debit')->where('type', '!=', 'payment')->sum('amount');
+            $captainManualCredit = (float) FinancialTransaction::where('party_type', 'captain')->where('direction', 'credit')->where('type', '!=', 'receipt')->sum('amount');
+            $effectiveCaptainCollected = $totalCashCollected + $captainManualDebit;
+            $effectiveCaptainSettled = $totalPaidDebt + $captainExtraReceipts + $captainManualCredit;
+            $totalCaptainsDebt = max(0, $effectiveCaptainCollected - $effectiveCaptainSettled);
+
+            // إجمالي المستحقات للمطاعم (محسوبة بتجميع مباشر عالي السرعة)
+            $totalPaidToStores = (float) FinancialTransaction::where('party_type', 'store')->where('type', 'payment')->sum('amount');
+            $storesManualDebit = (float) FinancialTransaction::where('party_type', 'store')->where('direction', 'debit')->where('type', '!=', 'payment')->sum('amount');
+            $storesManualCredit = (float) FinancialTransaction::where('party_type', 'store')->where('direction', 'credit')->sum('amount');
+            $netSalesDueAllStores = max(0, $totalSales - $totalAppCommission);
+            $totalStoresDebit = $totalPaidToStores + $storesManualDebit;
+            $totalStoresCredit = $netSalesDueAllStores + $storesManualCredit;
+            $totalStoresNetDue = max(0, $totalStoresCredit - $totalStoresDebit);
+
+            // إجمالي الرواتب المصروفة هذا الشهر
+            $paidSalariesThisMonth = (float) Salary::where('month', $thisMonth)->where('status', 'paid')->sum('paid_amount');
+            $pendingSalariesThisMonth = (float) Salary::where('month', $thisMonth)->where('status', '!=', 'paid')->sum('net_salary');
+
+            // السندات وحركات الصندوق
+            $totalReceipts = (float) FinancialTransaction::where('type', 'receipt')->sum('amount');
+            $totalPayments = (float) FinancialTransaction::where('type', 'payment')->sum('amount');
+            $netCashFlow = $totalReceipts - $totalPayments;
+
+            return [
+                'total_sales' => $totalSales,
+                'this_month_sales' => $thisMonthSales,
+                'app_commission' => $totalAppCommission,
+                'captain_commissions' => $totalCaptainCommissions,
+                'captains_cash_collected' => $totalCashCollected,
+                'captains_outstanding_debt' => $totalCaptainsDebt,
+                'stores_net_due' => $totalStoresNetDue,
+                'stores_credit' => $totalStoresCredit,
+                'stores_debit' => $totalStoresDebit,
+                'paid_salaries' => $paidSalariesThisMonth,
+                'pending_salaries' => $pendingSalariesThisMonth,
+                'total_receipts' => $totalReceipts,
+                'total_payments' => $totalPayments,
+                'net_cash_flow' => $netCashFlow,
+                'active_employees' => Employee::where('status', 'active')->count(),
+                'active_captains' => User::where('role', 'captain')->where('status', 'active')->count(),
+                'total_stores' => Store::count(),
+            ];
+        });
 
         // آخر 10 عمليات محاسبية
         $latestTransactions = FinancialTransaction::with(['creator'])->latest('transaction_date')->latest('id')->take(10)->get();
 
-        // إحصائيات المطاعم والكباتن الأكثر نشاطاً
-        $topStores = Store::withCount(['orders' => fn($q) => $q->where('status', 'completed')])
-            ->orderBy('orders_count', 'desc')
-            ->take(5)
-            ->get();
-
-        $stats = [
-            'total_sales' => $totalSales,
-            'this_month_sales' => $thisMonthSales,
-            'app_commission' => $totalAppCommission,
-            'captain_commissions' => $totalCaptainCommissions,
-            'captains_cash_collected' => $totalCashCollected,
-            'captains_outstanding_debt' => $totalCaptainsDebt,
-            'stores_net_due' => $totalStoresNetDue,
-            'stores_credit' => $totalStoresCredit,
-            'stores_debit' => $totalStoresDebit,
-            'paid_salaries' => $paidSalariesThisMonth,
-            'pending_salaries' => $pendingSalariesThisMonth,
-            'total_receipts' => $totalReceipts,
-            'total_payments' => $totalPayments,
-            'net_cash_flow' => $netCashFlow,
-            'active_employees' => Employee::where('status', 'active')->count(),
-            'active_captains' => $captains->where('status', 'active')->count(),
-            'total_stores' => $stores->count(),
-        ];
+        // إحصائيات المطاعم الأكثر نشاطاً (مخزنة مؤقتاً لدقيقتين)
+        $topStores = Cache::remember('finance.overview.top_stores', 120, function () {
+            return Store::withCount(['orders' => fn($q) => $q->where('status', 'completed')])
+                ->orderBy('orders_count', 'desc')
+                ->take(5)
+                ->get();
+        });
 
         return view('admin.finance.overview', compact('stats', 'latestTransactions', 'topStores'));
     }

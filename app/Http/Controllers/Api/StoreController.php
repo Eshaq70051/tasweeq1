@@ -17,48 +17,60 @@ class StoreController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Store::query();
+        $cacheKey = 'stores.index.' . md5(serialize([
+            'category' => $request->route('id') ?? $request->category_id,
+            'search'   => $request->search,
+            'filter'   => $request->get('filter', 'default'),
+            'page'     => $request->get('page', 1),
+            'per_page' => $request->get('per_page', 20),
+        ]));
 
-        $categoryId = $request->route('id') ?? $request->category_id;
-        if ($categoryId) {
-            $query->where('category_id', $categoryId);
-        }
+        $stores = Cache::remember($cacheKey, 60, function () use ($request) {
+            $query = Store::query();
 
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('name_en', 'like', "%{$search}%");
-            });
-        }
+            $categoryId = $request->route('id') ?? $request->category_id;
+            if ($categoryId) {
+                $query->where('category_id', $categoryId);
+            }
 
-        // خيارات التصفية: الافتراضي، الأقرب، الأعلى تقييماً، جديدنا
-        $filter = $request->get('filter', 'default');
-        switch ($filter) {
-            case 'nearest':
-                $query->orderBy('distance', 'asc');
-                break;
-            case 'rating':
-                $query->orderBy('rating', 'desc');
-                break;
-            case 'new':
-                $query->orderBy('id', 'desc');
-                break;
-            case 'default':
-            default:
-                $query->orderBy('is_featured', 'desc')->orderBy('id', 'desc');
-                break;
-        }
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('name_en', 'like', "%{$search}%");
+                });
+            }
 
-        $stores = $query->paginate($request->get('per_page', 20));
+            // خيارات التصفية: الافتراضي، الأقرب، الأعلى تقييماً، جديدنا
+            $filter = $request->get('filter', 'default');
+            switch ($filter) {
+                case 'nearest':
+                    $query->orderBy('distance', 'asc');
+                    break;
+                case 'rating':
+                    $query->orderBy('rating', 'desc');
+                    break;
+                case 'new':
+                    $query->orderBy('id', 'desc');
+                    break;
+                case 'default':
+                default:
+                    $query->orderBy('is_featured', 'desc')->orderBy('id', 'desc');
+                    break;
+            }
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $stores->items(),
-            'total' => $stores->total(),
-            'current_page' => $stores->currentPage(),
-            'last_page' => $stores->lastPage(),
-        ]);
+            return $query->paginate($request->get('per_page', 20));
+        });
+
+        return response()
+            ->json([
+                'status' => 'success',
+                'data' => $stores->items(),
+                'total' => $stores->total(),
+                'current_page' => $stores->currentPage(),
+                'last_page' => $stores->lastPage(),
+            ])
+            ->header('Cache-Control', 'public, max-age=60');
     }
 
     /**
@@ -77,7 +89,7 @@ class StoreController extends Controller
         return response()->json([
             'status' => 'success',
             'data' => $stores,
-        ]);
+        ])->header('Cache-Control', 'public, max-age=300');
     }
 
     /**
@@ -85,22 +97,24 @@ class StoreController extends Controller
      */
     public function show($id)
     {
-        $store = Store::with([
-            'category',
-            'menuSections' => function ($q) {
-                $q->where('is_active', true)->orderBy('sort_order')->with(['products' => function ($pq) {
-                    $pq->where('is_available', true);
-                }]);
-            },
-            'products' => function ($q) {
-                $q->where('is_available', true);
-            }
-        ])->findOrFail($id);
+        $store = Cache::remember("stores.show.{$id}", 120, function () use ($id) {
+            return Store::with([
+                'category',
+                'menuSections' => function ($q) {
+                    $q->where('is_active', true)->orderBy('sort_order')->with(['products' => function ($pq) {
+                        $pq->where('is_available', true);
+                    }]);
+                },
+                'products' => function ($q) {
+                    $q->where('is_available', true);
+                }
+            ])->findOrFail($id);
+        });
 
         return response()->json([
             'status' => 'success',
             'data' => $store,
-        ]);
+        ])->header('Cache-Control', 'public, max-age=120');
     }
 
     /**
@@ -168,6 +182,8 @@ class StoreController extends Controller
             'is_active' => true,
         ]);
 
+        Cache::forget("stores.show.{$id}");
+
         return response()->json([
             'status' => 'success',
             'message' => 'تمت إضافة قسم المنيو بنجاح',
@@ -203,6 +219,8 @@ class StoreController extends Controller
         $validated['is_available'] = $request->boolean('is_available', true);
 
         $product = Product::create($validated);
+
+        Cache::forget("stores.show.{$id}");
 
         return response()->json([
             'status' => 'success',

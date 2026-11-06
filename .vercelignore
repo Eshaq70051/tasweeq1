@@ -5,4 +5,7 @@ docker
 *.py
 *.yaml
 *.sql
-download_errors.json
+*.log
+*.cache
+storage/*.json
+storage/logs/*

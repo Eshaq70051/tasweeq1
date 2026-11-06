@@ -23,7 +23,7 @@ class SettingsController extends Controller
         return response()->json([
             'success' => true,
             'data' => $settings
-        ]);
+        ])->header('Cache-Control', 'public, max-age=600');
     }
 
     /**

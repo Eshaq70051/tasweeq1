@@ -22,26 +22,30 @@ Route::get('/admin', function () {
 });
 
 Route::get('/media/{path}', function (string $path) {
+    $cacheHeaders = ['Cache-Control' => 'public, max-age=31536000, immutable'];
+
     $publicPath = public_path('media/' . $path);
     if (file_exists($publicPath)) {
-        return response()->file($publicPath);
+        return response()->file($publicPath, $cacheHeaders);
     }
 
     if (Storage::disk('public')->exists($path)) {
-        return response()->file(Storage::disk('public')->path($path));
+        return response()->file(Storage::disk('public')->path($path), $cacheHeaders);
     }
 
     abort(404);
 })->where('path', '.*')->name('media.file');
 
 Route::get('/storage/{path}', function (string $path) {
+    $cacheHeaders = ['Cache-Control' => 'public, max-age=31536000, immutable'];
+
     $publicPath = public_path('media/' . $path);
     if (file_exists($publicPath)) {
-        return response()->file($publicPath);
+        return response()->file($publicPath, $cacheHeaders);
     }
 
     if (Storage::disk('public')->exists($path)) {
-        return response()->file(Storage::disk('public')->path($path));
+        return response()->file(Storage::disk('public')->path($path), $cacheHeaders);
     }
 
     abort(404);

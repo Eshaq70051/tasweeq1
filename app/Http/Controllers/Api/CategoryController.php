@@ -23,12 +23,14 @@ class CategoryController extends Controller
         return response()->json([
             'success' => true,
             'data' => CategoryResource::collection($categories),
-        ]);
+        ])->header('Cache-Control', 'public, max-age=600');
     }
 
     public function show($id)
     {
-        $category = Category::withCount('products')->find($id);
+        $category = Cache::remember("categories.show.{$id}", 600, function () use ($id) {
+            return Category::withCount('products')->find($id);
+        });
 
         if (!$category) {
             return response()->json([
@@ -40,7 +42,7 @@ class CategoryController extends Controller
         return response()->json([
             'success' => true,
             'data' => new CategoryResource($category),
-        ]);
+        ])->header('Cache-Control', 'public, max-age=600');
     }
 
     public function products($id, Request $request)

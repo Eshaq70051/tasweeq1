@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\MarketingSlider;
 use App\Services\CloudinaryService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -72,7 +73,9 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $product = Product::with('category')->find($id);
+        $product = Cache::remember("products.show.{$id}", 300, function () use ($id) {
+            return Product::with('category')->find($id);
+        });
 
         if (!$product) {
             return response()->json([
@@ -84,17 +87,19 @@ class ProductController extends Controller
         return response()->json([
             'success' => true,
             'data' => new ProductResource($product),
-        ]);
+        ])->header('Cache-Control', 'public, max-age=300');
     }
 
     public function getSliders()
     {
-        $sliders = MarketingSlider::all();
+        $sliders = Cache::remember('marketing_sliders.all', 600, function () {
+            return MarketingSlider::orderBy('id', 'desc')->get();
+        });
 
         return response()->json([
             'success' => true,
             'data' => $sliders,
-        ]);
+        ])->header('Cache-Control', 'public, max-age=300');
     }
 
     public function store(StoreProductRequest $request)
